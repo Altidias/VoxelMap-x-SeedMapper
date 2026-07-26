@@ -37,9 +37,8 @@ public class VoxelMapPipelines {
 
     public static final RenderPipeline LINES_NO_DEPTH = RenderPipeline.builder(RenderPipelines.LINES_SNIPPET)
             .withLocation(Identifier.fromNamespaceAndPath(VoxelConstants.MOD_ID, "pipeline/seedmapper_lines_no_depth"))
-            // The overlay target uses reversed depth. This keeps the front outline while rejecting
-            // outlines that are behind an opaque ESP fill.
-            .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+            // ESP outlines must remain visible through world geometry.
+            .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, true))
             .build();
 
     public static final RenderPipeline QUADS_NO_DEPTH = RenderPipeline.builder(RenderPipelines.DEBUG_FILLED_SNIPPET)

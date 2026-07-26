@@ -36,7 +36,7 @@ public class SeedMapperEspStyle {
     }
 
     public SeedMapperEspStyleSnapshot snapshot(int fallbackColor) {
-        int baseColor = parseColor(this.outlineColor, fallbackColor);
+        int baseColor = this.useCommandColor ? fallbackColor : parseColor(this.outlineColor, fallbackColor);
         int fillRgb = parseColor(this.fillColor, baseColor);
         return new SeedMapperEspStyleSnapshot(
                 baseColor | 0xFF000000,

@@ -3,6 +3,7 @@ package com.mamiyaotaru.voxelmap.seedmapper;
 import com.mamiyaotaru.voxelmap.util.VoxelMapRenderTypes;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mamiyaotaru.voxelmap.util.AlwaysOnTopSubmitter;
 import net.minecraft.client.Camera;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.core.BlockPos;
@@ -25,6 +26,8 @@ public final class SeedMapperEspManager {
     private static final byte AXIS_Y = 1;
     private static final byte AXIS_Z = 2;
     private static final float LINE_WIDTH = 2.0F;
+    private static final float GLOW_LINE_WIDTH = 8.0F;
+    private static final float GLOW_ALPHA = 0.18F;
     private static final Set<HighlightBox> HIGHLIGHTS = ConcurrentHashMap.newKeySet();
     private static final long DEFAULT_TIMEOUT_MS = 5L * 60L * 1000L;
     private static volatile long timeoutMs = DEFAULT_TIMEOUT_MS;
@@ -147,17 +150,21 @@ public final class SeedMapperEspManager {
 
     private static void renderGeometry(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, Camera camera, RenderGeometry geometry) {
         Vec3 cameraPos = camera.position();
+        AlwaysOnTopSubmitter overlay = AlwaysOnTopSubmitter.order(submitNodeCollector, Integer.MAX_VALUE);
         if (!geometry.fillFaces().isEmpty()) {
             List<FillFace> sortedFillFaces = new ArrayList<>(geometry.fillFaces());
             // With an always-pass depth writer, render far faces first so the nearest fill surface
             // remains in the overlay depth buffer for the outline pass.
             sortedFillFaces.sort(Comparator.comparingDouble(face -> -face.distanceToSqr(cameraPos)));
-            submitNodeCollector.submitCustomGeometry(poseStack, VoxelMapRenderTypes.SEEDMAPPER_QUADS_NO_DEPTH, (pose, fillBuffer) -> {
+            overlay.submitCustomGeometry(poseStack, VoxelMapRenderTypes.SEEDMAPPER_ESP_QUADS_NO_DEPTH, (pose, fillBuffer) -> {
                 for (FillFace face : sortedFillFaces) drawQuadFill(fillBuffer, pose, face, cameraPos);
             });
         }
-        submitNodeCollector.submitCustomGeometry(poseStack, VoxelMapRenderTypes.SEEDMAPPER_LINES_NO_DEPTH, (pose, lineBuffer) -> {
-            for (Line line : geometry.lines()) drawLine(lineBuffer, pose, line, cameraPos);
+        overlay.submitCustomGeometry(poseStack, VoxelMapRenderTypes.SEEDMAPPER_ESP_LINES_NO_DEPTH, (pose, glowBuffer) -> {
+            for (Line line : geometry.lines()) drawLine(glowBuffer, pose, line, cameraPos, GLOW_LINE_WIDTH, line.alpha() * GLOW_ALPHA);
+        });
+        overlay.submitCustomGeometry(poseStack, VoxelMapRenderTypes.SEEDMAPPER_ESP_LINES_NO_DEPTH, (pose, lineBuffer) -> {
+            for (Line line : geometry.lines()) drawLine(lineBuffer, pose, line, cameraPos, LINE_WIDTH, line.alpha());
         });
     }
 
@@ -169,7 +176,7 @@ public final class SeedMapperEspManager {
         return Color.HSBtoRGB(hue, 0.9F, 1.0F);
     }
 
-    private static void drawLine(VertexConsumer buffer, PoseStack.Pose pose, Line line, Vec3 cameraPos) {
+    private static void drawLine(VertexConsumer buffer, PoseStack.Pose pose, Line line, Vec3 cameraPos, float lineWidth, float alpha) {
         Vec3 start = line.start();
         Vec3 end = line.end();
         Vec3 normal = end.subtract(start).normalize();
@@ -177,13 +184,13 @@ public final class SeedMapperEspManager {
         float green = ARGB.greenFloat(line.color());
         float blue = ARGB.blueFloat(line.color());
         buffer.addVertex(pose, (float) (start.x - cameraPos.x), (float) (start.y - cameraPos.y), (float) (start.z - cameraPos.z))
-                .setColor(red, green, blue, line.alpha())
+                .setColor(red, green, blue, alpha)
                 .setNormal(pose, (float) normal.x, (float) normal.y, (float) normal.z)
-                .setLineWidth(LINE_WIDTH);
+                .setLineWidth(lineWidth);
         buffer.addVertex(pose, (float) (end.x - cameraPos.x), (float) (end.y - cameraPos.y), (float) (end.z - cameraPos.z))
-                .setColor(red, green, blue, line.alpha())
+                .setColor(red, green, blue, alpha)
                 .setNormal(pose, (float) normal.x, (float) normal.y, (float) normal.z)
-                .setLineWidth(LINE_WIDTH);
+                .setLineWidth(lineWidth);
     }
 
     private static void drawQuadFill(VertexConsumer buffer, PoseStack.Pose pose, FillFace face, Vec3 cameraPos) {

@@ -58,4 +58,20 @@ public class VoxelMapRenderTypes {
                     .createRenderSetup()
     );
 
+    public static final RenderType SEEDMAPPER_ESP_LINES_NO_DEPTH = RenderType.create(
+            "voxelmap_seedmapper_esp_lines_no_depth",
+            RenderSetup.builder(VoxelMapPipelines.LINES_NO_DEPTH)
+                    .setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
+                    .setOutputTarget(OutputTarget.MAIN_TARGET)
+                    .createRenderSetup()
+    );
+
+    public static final RenderType SEEDMAPPER_ESP_QUADS_NO_DEPTH = RenderType.create(
+            "voxelmap_seedmapper_esp_quads_no_depth",
+            RenderSetup.builder(VoxelMapPipelines.QUADS_NO_DEPTH)
+                    .setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
+                    .setOutputTarget(OutputTarget.MAIN_TARGET)
+                    .createRenderSetup()
+    );
+
 }
