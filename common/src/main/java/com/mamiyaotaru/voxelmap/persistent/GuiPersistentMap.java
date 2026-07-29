@@ -118,6 +118,7 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
     private static double pendingCenterZ = Double.NaN;
     private final Random generator = new Random();
     private final PersistentMap persistentMap;
+    private final PlotManager plotManager = new PlotManager();
     private final WaypointManager waypointManager;
     private final MapSettingsManager mapOptions;
     private final RadarSettingsManager radarOptions;
@@ -311,6 +312,16 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
     private SeedMapperChestLootWidget seedMapperChestLootWidget;
     private Set<SeedMapperFeature> seedMapperAllFeaturesSaved;
     private boolean currentDragging;
+    private boolean plotMode;
+    private boolean plotStartSet;
+    private double plotStartX;
+    private double plotStartZ;
+    private PlotManager.Plot selectedPlot;
+    private PlotManager.Plot editingPlot;
+    private int editingPlotEndpoint;
+    private PlotManager.Plot placingDuplicatePlot;
+    private boolean rightMapDrag;
+    private boolean rightMapDragMoved;
     private boolean keySprintPressed;
     private boolean keyUpPressed;
     private boolean keyDownPressed;
@@ -389,6 +400,7 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
         }
 
         normalizeWorldMapDimensionView();
+        loadPlotsForViewedDimension();
         this.screenTitle = I18n.get("worldmap.title");
         this.buildWorldName();
         this.leftMouseButtonDown = false;
@@ -518,7 +530,15 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
         }
         refreshWorldMapControlLabels();
         buildWorldName();
+        loadPlotsForViewedDimension();
         MapSettingsManager.instance.saveAll();
+    }
+
+    private void loadPlotsForViewedDimension() {
+        plotManager.load(waypointManager.getCurrentWorldName(), waypointManager.getCurrentSubworldDescriptor(false), getViewedDimensionIdentifier().toString());
+        plotStartSet = false;
+        selectedPlot = null;
+        editingPlot = null;
     }
 
     private void normalizeWorldMapDimensionView() {
@@ -641,11 +661,32 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent mouseButtonEvent) {
+        boolean wasRightMapDrag = rightMapDrag && rightMapDragMoved;
         currentDragging = false;
+        if (mouseButtonEvent.button() == 1) {
+            rightMapDrag = false;
+            rightMapDragMoved = false;
+            if (wasRightMapDrag) {
+                return true;
+            }
+        }
         int mouseX = (int) mouseButtonEvent.x();
         int mouseY = (int) mouseButtonEvent.y();
 
         if (isInTopHeader(mouseX, mouseY) || isInSeedMapperStrip(mouseX, mouseY)) {
+            return true;
+        }
+        if (mouseButtonEvent.button() == 0 && editingPlot != null) {
+            double[] mapPoint = mapPointFromGui(mouseButtonEvent.x(), mouseButtonEvent.y());
+            PlotManager.Plot plot = editingPlot;
+            double[] viewPlot = plotCoordinatesForView(plot);
+            double sourceX = mapPoint[0] / viewPlot[4];
+            double sourceZ = mapPoint[1] / viewPlot[4];
+            PlotManager.Plot updated = editingPlotEndpoint == 1
+                    ? new PlotManager.Plot(sourceX, sourceZ, plot.x2(), plot.z2(), plot.dimension(), plot.showOppositeDimension(), plot.thickness(), plot.color())
+                    : new PlotManager.Plot(plot.x1(), plot.z1(), sourceX, sourceZ, plot.dimension(), plot.showOppositeDimension(), plot.thickness(), plot.color());
+            plotManager.replace(plot, updated);
+            editingPlot = null;
             return true;
         }
 
@@ -659,6 +700,8 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
             int mouseDirectX = (int) minecraft.mouseHandler.xpos();
             int mouseDirectY = (int) minecraft.mouseHandler.ypos();
             if (mapOptions.worldmapAllowed) {
+                double[] mapPoint = mapPointFromGui(mouseButtonEvent.x(), mouseButtonEvent.y());
+                selectedPlot = findPlotAt(mapPoint[0], mapPoint[1]);
                 this.createPopup((int) mouseButtonEvent.x(), (int) mouseButtonEvent.y(), mouseDirectX, mouseDirectY);
             }
         }
@@ -670,6 +713,47 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
     public boolean mouseClicked(MouseButtonEvent mouseButtonEvent, boolean doubleClick) {
         int mouseX = (int) mouseButtonEvent.x();
         int mouseY = (int) mouseButtonEvent.y();
+        if (mouseButtonEvent.button() == 1 && isInMap(mouseX, mouseY) && this.popupOpen()) {
+            rightMapDrag = true;
+            rightMapDragMoved = false;
+            currentDragging = true;
+        }
+        if (mouseButtonEvent.button() == 0 && isInMap(mouseX, mouseY)) {
+            double[] mapPoint = mapPointFromGui(mouseButtonEvent.x(), mouseButtonEvent.y());
+            if (placingDuplicatePlot != null) {
+                double[] original = plotCoordinatesForView(placingDuplicatePlot);
+                double centerX = (original[0] + original[2]) / 2.0D;
+                double centerZ = (original[1] + original[3]) / 2.0D;
+                double sourceScale = original[4];
+                double dx = (mapPoint[0] - centerX) / sourceScale;
+                double dz = (mapPoint[1] - centerZ) / sourceScale;
+                plotManager.add(new PlotManager.Plot(placingDuplicatePlot.x1() + dx, placingDuplicatePlot.z1() + dz,
+                        placingDuplicatePlot.x2() + dx, placingDuplicatePlot.z2() + dz, placingDuplicatePlot.dimension(),
+                        placingDuplicatePlot.showOppositeDimension(), placingDuplicatePlot.thickness(), placingDuplicatePlot.color()));
+                placingDuplicatePlot = null;
+                return true;
+            }
+            PlotManager.Plot endpointPlot = findPlotAt(mapPoint[0], mapPoint[1]);
+            int endpoint = findPlotEndpointAt(mapPoint[0], mapPoint[1]);
+            if (endpoint != 0) {
+                editingPlot = endpointPlot;
+                selectedPlot = endpointPlot;
+                editingPlotEndpoint = endpoint;
+                return true;
+            }
+            if (plotMode && !plotStartSet) {
+                plotStartX = mapPoint[0];
+                plotStartZ = mapPoint[1];
+                plotStartSet = true;
+                return true;
+            } else if (plotMode) {
+                plotManager.add(new PlotManager.Plot(plotStartX, plotStartZ, mapPoint[0], mapPoint[1],
+                        getViewedDimensionIdentifier().toString(), false, 0, 0));
+                plotStartSet = false;
+                plotMode = false;
+                return true;
+            }
+        }
         if (mouseButtonEvent.button() == 0 && handlePlayerLayerStatusClick(mouseX, mouseY)) {
             return true;
         }
@@ -988,6 +1072,9 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
                 this.lastMouseY = mouseDirectY;
                 this.leftMouseButtonDown = true;
             } else if (this.leftMouseButtonDown) {
+                if (rightMapDrag && (Math.abs(this.lastMouseX - mouseDirectX) > 2.0F || Math.abs(this.lastMouseY - mouseDirectY) > 2.0F)) {
+                    rightMapDragMoved = true;
+                }
                 this.deltaX = (this.lastMouseX - mouseDirectX) * this.mouseDirectToMap;
                 this.deltaY = (this.lastMouseY - mouseDirectY) * this.mouseDirectToMap;
                 this.lastMouseX = mouseDirectX;
@@ -1146,6 +1233,8 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
                 cursorCoordX = cursorX * this.mouseDirectToMap + (this.mapCenterX - this.centerX * this.guiToMap);
                 cursorCoordZ = cursorY * this.mouseDirectToMap + (this.mapCenterZ - this.centerY * this.guiToMap);
             }
+
+            drawPlots(graphics, cursorCoordX, cursorCoordZ);
 
             if (this.oldNorth) {
                 graphics.pose().rotate(-90.0F * Mth.DEG_TO_RAD);
@@ -4533,6 +4622,16 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
         selectedSeedMapperMarker = null;
         selectedSeedMapperWorldKey = null;
         ArrayList<Popup.PopupEntry> entries = new ArrayList<>();
+        if (selectedPlot != null) {
+            entries.add(new Popup.PopupEntry("Delete Plot", 17, true, true));
+            boolean oppositeVisible = selectedPlot.showOppositeDimension() && isOppositeDimension(selectedPlot.dimension(), getViewedDimensionIdentifier().toString());
+            entries.add(new Popup.PopupEntry(oppositeVisible ? "Hide in Opposite Dimension" : "Show in Opposite Dimension", 18, true, true));
+            entries.add(new Popup.PopupEntry("Thickness: " + (selectedPlot.thickness() + 1), 19, true, true));
+            entries.add(new Popup.PopupEntry("Color: " + new String[]{"Gold", "Cyan", "Green", "Pink", "Purple", "Orange"}[Math.floorMod(selectedPlot.color(), 6)], 20, true, true));
+            entries.add(new Popup.PopupEntry("Duplicate Plot", 21, true, true));
+            this.createPopup(x, y, directX, directY, 120, entries);
+            return;
+        }
         float cursorX = directX;
         float cursorY = directY - this.top * this.guiToDirectMouse;
         float cursorCoordX;
@@ -4559,8 +4658,9 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
         }
         entries.add(entry);
         addTransportMenuEntry(entries);
-        entry = new Popup.PopupEntry(I18n.get("minimap.waypoints.share"), 2, true, true);
+        entry = new Popup.PopupEntry(I18n.get("minimap.waypoints.share"), 2, false, true);
         entries.add(entry);
+        entries.add(new Popup.PopupEntry("Plot", 16, true, true));
         entry = new Popup.PopupEntry("Export Visible SeedMap", 6, true, seedMapperOptions.enabled);
         entries.add(entry);
         entry = new Popup.PopupEntry("Recenter Map", 12, true, true);
@@ -4635,6 +4735,44 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
         this.addClicked = false;
         this.deleteClicked = false;
         switch (action) {
+            case 16 -> {
+                plotMode = true;
+                plotStartSet = false;
+                selectedPlot = null;
+            }
+            case 17 -> {
+                if (selectedPlot != null) {
+                    plotManager.remove(selectedPlot);
+                    selectedPlot = null;
+                }
+            }
+            case 18 -> {
+                if (selectedPlot != null) {
+                    plotManager.replace(selectedPlot, new PlotManager.Plot(selectedPlot.x1(), selectedPlot.z1(), selectedPlot.x2(), selectedPlot.z2(),
+                            selectedPlot.dimension(), !selectedPlot.showOppositeDimension(), selectedPlot.thickness(), selectedPlot.color()));
+                    selectedPlot = null;
+                }
+            }
+            case 19 -> {
+                if (selectedPlot != null) {
+                    plotManager.replace(selectedPlot, new PlotManager.Plot(selectedPlot.x1(), selectedPlot.z1(), selectedPlot.x2(), selectedPlot.z2(),
+                            selectedPlot.dimension(), selectedPlot.showOppositeDimension(), (selectedPlot.thickness() + 1) % 4, selectedPlot.color()));
+                    selectedPlot = null;
+                }
+            }
+            case 20 -> {
+                if (selectedPlot != null) {
+                    plotManager.replace(selectedPlot, new PlotManager.Plot(selectedPlot.x1(), selectedPlot.z1(), selectedPlot.x2(), selectedPlot.z2(),
+                            selectedPlot.dimension(), selectedPlot.showOppositeDimension(), selectedPlot.thickness(), (selectedPlot.color() + 1) % 6));
+                    selectedPlot = null;
+                }
+            }
+            case 21 -> {
+                if (selectedPlot != null) {
+                    placingDuplicatePlot = selectedPlot;
+                    selectedPlot = null;
+                }
+            }
             case 0 -> {
                 if (selectedWaypoint != null) {
                     x = getWaypointXInViewedDimension(selectedWaypoint);
@@ -4820,6 +4958,130 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
             selectedSeedMapperAssociatedWaypoint = null;
         }
 
+    }
+
+    private void drawPlots(GuiGraphicsExtractor graphics, float cursorX, float cursorZ) {
+        float previewThickness = Math.max(1.0F, 2.0F / Math.max(0.0001F, this.mapToGui));
+        for (PlotManager.Plot plot : plotManager.getPlots()) {
+            if (!isPlotVisibleInViewedDimension(plot)) continue;
+            double[] viewPlot = plotCoordinatesForView(plot);
+            float thickness = Math.max(1.0F, (2.0F + plot.thickness()) / Math.max(0.0001F, this.mapToGui));
+            float x1 = (float) viewPlot[0];
+            float z1 = (float) viewPlot[1];
+            float x2 = (float) viewPlot[2];
+            float z2 = (float) viewPlot[3];
+            if (plot == editingPlot && editingPlotEndpoint == 2) {
+                x2 = cursorX;
+                z2 = cursorZ;
+            }
+            if (plot == editingPlot && editingPlotEndpoint == 1) {
+                x1 = cursorX;
+                z1 = cursorZ;
+            }
+            int color = new int[]{0xFFFFD21F, 0xFF4DD2FF, 0xFF66E36F, 0xFFFF66C4, 0xFFB980FF, 0xFFFF8033}[Math.floorMod(plot.color(), 6)];
+            appendThickInterpolatedLine(x1, z1, x2, z2, thickness + 2.0F / Math.max(0.0001F, this.mapToGui), 0xDD000000);
+            appendThickInterpolatedLine(x1, z1, x2, z2, thickness, color);
+        }
+        if (plotStartSet) {
+            appendThickInterpolatedLine((float) plotStartX, (float) plotStartZ, cursorX, cursorZ, previewThickness, 0xFFFFF27A);
+        }
+        if (placingDuplicatePlot != null && isPlotVisibleInViewedDimension(placingDuplicatePlot)) {
+            double[] original = plotCoordinatesForView(placingDuplicatePlot);
+            float dx = cursorX - (float) ((original[0] + original[2]) / 2.0D);
+            float dz = cursorZ - (float) ((original[1] + original[3]) / 2.0D);
+            float x1 = (float) original[0] + dx;
+            float z1 = (float) original[1] + dz;
+            float x2 = (float) original[2] + dx;
+            float z2 = (float) original[3] + dz;
+            appendThickInterpolatedLine(x1, z1, x2, z2, previewThickness + 2.0F / Math.max(0.0001F, this.mapToGui), 0xAA000000);
+            appendThickInterpolatedLine(x1, z1, x2, z2, previewThickness, 0xAAFFFFFF);
+        }
+        flushExploredQuads(graphics);
+    }
+
+    private double[] mapPointFromGui(double guiX, double guiY) {
+        float cursorX = (float) (guiX * this.guiToDirectMouse);
+        float cursorY = (float) ((guiY - this.top) * this.guiToDirectMouse);
+        if (this.oldNorth) {
+            return new double[]{cursorY * this.mouseDirectToMap + (this.mapCenterZ - this.centerY * this.guiToMap),
+                    -(cursorX * this.mouseDirectToMap + (this.mapCenterX - this.centerX * this.guiToMap))};
+        }
+        return new double[]{cursorX * this.mouseDirectToMap + (this.mapCenterX - this.centerX * this.guiToMap),
+                cursorY * this.mouseDirectToMap + (this.mapCenterZ - this.centerY * this.guiToMap)};
+    }
+
+    private boolean isInMap(int x, int y) {
+        return x >= 0 && x < this.width && y > this.top && y < this.bottom;
+    }
+
+    private PlotManager.Plot findPlotAt(double x, double z) {
+        double threshold = Math.max(5.0 / Math.max(0.0001, this.mapToGui), 2.0);
+        for (int i = plotManager.getPlots().size() - 1; i >= 0; i--) {
+            PlotManager.Plot plot = plotManager.getPlots().get(i);
+            if (!isPlotVisibleInViewedDimension(plot)) continue;
+            double[] viewPlot = plotCoordinatesForView(plot);
+            if (distanceToSegment(x, z, viewPlot[0], viewPlot[1], viewPlot[2], viewPlot[3]) <= threshold) return plot;
+        }
+        return null;
+    }
+
+    private int findPlotEndpointAt(double x, double z) {
+        PlotManager.Plot plot = findPlotAt(x, z);
+        if (plot == null) return 0;
+        double[] viewPlot = plotCoordinatesForView(plot);
+        double threshold = Math.max(8.0 / Math.max(0.0001, this.mapToGui), 3.0);
+        double first = Math.hypot(x - viewPlot[0], z - viewPlot[1]);
+        double second = Math.hypot(x - viewPlot[2], z - viewPlot[3]);
+        if (first <= threshold || second <= threshold) return first <= second ? 1 : 2;
+        return 0;
+    }
+
+    private double distanceToSegment(double x, double z, double x1, double z1, double x2, double z2) {
+        double dx = x2 - x1;
+        double dz = z2 - z1;
+        double lengthSquared = dx * dx + dz * dz;
+        if (lengthSquared == 0.0) return Math.hypot(x - x1, z - z1);
+        double t = Mth.clamp((float) (((x - x1) * dx + (z - z1) * dz) / lengthSquared), 0.0F, 1.0F);
+        return Math.hypot(x - (x1 + t * dx), z - (z1 + t * dz));
+    }
+
+    private boolean isPlotVisibleInViewedDimension(PlotManager.Plot plot) {
+        String viewed = getViewedDimensionIdentifier().toString();
+        return viewed.equals(plot.dimension()) || (plot.showOppositeDimension() && isOppositeDimension(plot.dimension(), viewed));
+    }
+
+    private boolean isOppositeDimension(String source, String viewed) {
+        boolean sourceOverworld = "minecraft:overworld".equals(source);
+        boolean sourceNether = "minecraft:the_nether".equals(source) || "minecraft:nether".equals(source);
+        boolean viewedOverworld = "minecraft:overworld".equals(viewed);
+        boolean viewedNether = "minecraft:the_nether".equals(viewed) || "minecraft:nether".equals(viewed);
+        return (sourceOverworld && viewedNether) || (sourceNether && viewedOverworld);
+    }
+
+    /** Returns x1,z1,x2,z2 and the source-to-view coordinate multiplier. */
+    private double[] plotCoordinatesForView(PlotManager.Plot plot) {
+        String viewed = getViewedDimensionIdentifier().toString();
+        double multiplier = 1.0D;
+        if (!viewed.equals(plot.dimension())) {
+            try {
+                multiplier = plotSourceCoordinateScale(plot.dimension()) / viewedCoordinateScale();
+            } catch (Exception ignored) {
+            }
+        }
+        return new double[]{plot.x1() * multiplier, plot.z1() * multiplier,
+                plot.x2() * multiplier, plot.z2() * multiplier, multiplier};
+    }
+
+    private double plotSourceCoordinateScale(String dimension) {
+        if ("minecraft:overworld".equals(dimension)) return 1.0D;
+        if ("minecraft:the_nether".equals(dimension) || "minecraft:nether".equals(dimension)) return 8.0D;
+        try {
+            DimensionContainer source = VoxelConstants.getVoxelMapInstance().getDimensionManager()
+                    .getDimensionContainerByIdentifier(Identifier.parse(dimension));
+            return coordinateScaleForDimension(source);
+        } catch (Exception ignored) {
+            return 1.0D;
+        }
     }
 
     private void openTransportPopup(Popup source) {
