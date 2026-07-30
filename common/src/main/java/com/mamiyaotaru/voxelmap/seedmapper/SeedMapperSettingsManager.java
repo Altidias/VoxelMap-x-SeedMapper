@@ -45,8 +45,22 @@ public class SeedMapperSettingsManager implements ISubSettingsManager {
     public int espDefaultChunks = 4;
     public double espTimeoutMinutes = 5.0D;
     public int worldMapMarkerLimit = 5000;
+    /** Maximum entity/marker icons rendered on the world map; zero means unlimited. */
+    public int worldMapEntityLimit = 2600;
     public boolean worldMapSeedPreview = false;
     public int minimapDistantMarkerRange = 2048;
+    public boolean elytraDetection = false;
+    public boolean containerDetection = false;
+    public boolean spawnerDetection = false;
+    public boolean workstationDetection = false;
+    public boolean redstoneDetection = false;
+    public boolean markerClustering = true;
+    public boolean markerPersistence = false;
+    public double mapEntityScale = 1.1D;
+    public double minimapEntityScale = 0.6D;
+    public double seedMapperMinimapIconScale = 0.75D;
+    public double seedMapperWorldMapIconScale = 1.0D;
+    private final java.util.EnumSet<SeedMapperMarkerOption> enabledMarkerOptions = java.util.EnumSet.allOf(SeedMapperMarkerOption.class);
 
     private final Set<SeedMapperFeature> enabledFeatures = EnumSet.allOf(SeedMapperFeature.class);
     private final Set<String> completedFeatureEntries = new HashSet<>();
@@ -57,6 +71,7 @@ public class SeedMapperSettingsManager implements ISubSettingsManager {
     private final Map<String, String> datapackSavedCachePaths = new HashMap<>();
     private final Map<String, String> savedSeeds = new HashMap<>();
     private final Map<String, Set<String>> datapackStructureDisabled = new HashMap<>();
+    private final Map<String, String> elytraDetectionStates = new HashMap<>();
 
     public SeedMapperSettingsManager() {
         for (SeedMapperEspTarget target : SeedMapperEspTarget.values()) {
@@ -95,8 +110,24 @@ public class SeedMapperSettingsManager implements ISubSettingsManager {
                     case "SeedMapper ESP Default Chunks" -> espDefaultChunks = Mth.clamp(Integer.parseInt(curLine[1]), 0, 8);
                     case "SeedMapper ESP Timeout Minutes" -> espTimeoutMinutes = Math.max(0.0D, Double.parseDouble(curLine[1]));
                     case "SeedMapper WorldMap Marker Limit" -> worldMapMarkerLimit = Mth.clamp(Integer.parseInt(curLine[1]), 200, 20000);
+                    case "SeedMapper WorldMap Entity Limit" -> {
+                        int value = Integer.parseInt(curLine[1]);
+                        worldMapEntityLimit = value >= 10000 ? 0 : Mth.clamp(value, 200, 10000);
+                    }
                     case "SeedMapper WorldMap Seed Preview" -> worldMapSeedPreview = Boolean.parseBoolean(curLine[1]);
                     case "SeedMapper Minimap Distant Marker Range" -> minimapDistantMarkerRange = Mth.clamp(Integer.parseInt(curLine[1]), 128, 32768);
+                    case "SeedMapper Elytra Detection" -> elytraDetection = Boolean.parseBoolean(curLine[1]);
+                    case "SeedMapper Container Detection" -> containerDetection = Boolean.parseBoolean(curLine[1]);
+                    case "SeedMapper Spawner Detection" -> spawnerDetection = Boolean.parseBoolean(curLine[1]);
+                    case "SeedMapper Workstation Detection" -> workstationDetection = Boolean.parseBoolean(curLine[1]);
+                    case "SeedMapper Redstone Detection" -> redstoneDetection = Boolean.parseBoolean(curLine[1]);
+                    case "SeedMapper Marker Clustering" -> markerClustering = Boolean.parseBoolean(curLine[1]);
+                    case "SeedMapper Marker Persistence" -> markerPersistence = Boolean.parseBoolean(curLine[1]);
+                    case "SeedMapper Map Entity Scale" -> mapEntityScale = Mth.clamp(Double.parseDouble(curLine[1]), 0.5D, 2.0D);
+                    case "SeedMapper Minimap Entity Scale" -> minimapEntityScale = Mth.clamp(Double.parseDouble(curLine[1]), 0.5D, 1.2D);
+                    case "SeedMapper Minimap Icon Scale" -> seedMapperMinimapIconScale = Mth.clamp(Double.parseDouble(curLine[1]), 0.5D, 1.25D);
+                    case "SeedMapper WorldMap Icon Scale" -> seedMapperWorldMapIconScale = Mth.clamp(Double.parseDouble(curLine[1]), 0.5D, 1.25D);
+                    case "SeedMapper Marker Options" -> loadMarkerOptions(curLine[1]);
                     case "SeedMapper Datapack Random Colors" -> loadIntList(curLine[1], datapackRandomColors);
                     case "SeedMapper Datapack Saved URLs" -> loadMap(curLine[1], datapackSavedUrls);
                     case "SeedMapper Datapack Saved Cache Paths" -> loadMap(curLine[1], datapackSavedCachePaths);
@@ -124,6 +155,7 @@ public class SeedMapperSettingsManager implements ISubSettingsManager {
                             }
                         }
                     }
+                    case "SeedMapper Elytra Detection States" -> loadMap(curLine[1], elytraDetectionStates);
                     default -> loadExtendedSetting(curLine[0], curLine[1]);
                 }
             }
@@ -181,8 +213,21 @@ public class SeedMapperSettingsManager implements ISubSettingsManager {
         out.println("SeedMapper ESP Default Chunks:" + espDefaultChunks);
         out.println("SeedMapper ESP Timeout Minutes:" + espTimeoutMinutes);
         out.println("SeedMapper WorldMap Marker Limit:" + worldMapMarkerLimit);
+        out.println("SeedMapper WorldMap Entity Limit:" + worldMapEntityLimit);
         out.println("SeedMapper WorldMap Seed Preview:" + worldMapSeedPreview);
         out.println("SeedMapper Minimap Distant Marker Range:" + minimapDistantMarkerRange);
+        out.println("SeedMapper Elytra Detection:" + elytraDetection);
+        out.println("SeedMapper Container Detection:" + containerDetection);
+        out.println("SeedMapper Mob Spawner Detection:" + spawnerDetection);
+        out.println("SeedMapper Workstation Detection:" + workstationDetection);
+        out.println("SeedMapper Redstone Detection:" + redstoneDetection);
+        out.println("SeedMapper Marker Clustering:" + markerClustering);
+        out.println("SeedMapper Marker Persistence:" + markerPersistence);
+        out.println("SeedMapper Map Entity Scale:" + mapEntityScale);
+        out.println("SeedMapper Minimap Entity Scale:" + minimapEntityScale);
+        out.println("SeedMapper Minimap Icon Scale:" + seedMapperMinimapIconScale);
+        out.println("SeedMapper WorldMap Icon Scale:" + seedMapperWorldMapIconScale);
+        out.println("SeedMapper Marker Options:" + enabledMarkerOptions.stream().map(SeedMapperMarkerOption::id).reduce((a, b) -> a + "," + b).orElse(""));
         out.println("SeedMapper Datapack Random Colors:" + saveIntList(datapackRandomColors));
         out.println("SeedMapper Datapack Saved URLs:" + saveMap(datapackSavedUrls));
         out.println("SeedMapper Datapack Saved Cache Paths:" + saveMap(datapackSavedCachePaths));
@@ -190,6 +235,7 @@ public class SeedMapperSettingsManager implements ISubSettingsManager {
         out.println("SeedMapper Datapack Structure Disabled:" + saveWorldSetMap(datapackStructureDisabled));
         out.println("SeedMapper Completed:" + String.join(",", completedFeatureEntries));
         out.println("SeedMapper Datapack Located:" + String.join(",", datapackLocatedEntries));
+        out.println("SeedMapper Elytra Detection States:" + saveMap(elytraDetectionStates));
         for (SeedMapperEspTarget target : SeedMapperEspTarget.values()) {
             getEspStyle(target).save(out, target.configPrefix());
         }
@@ -369,6 +415,36 @@ public class SeedMapperSettingsManager implements ISubSettingsManager {
 
     public boolean isCompleted(String worldKey, SeedMapperFeature feature, int x, int z) {
         return completedFeatureEntries.contains(buildCompletionKey(worldKey, feature, x, z));
+    }
+
+    public boolean isElytraMissing(String worldKey, int x, int z) {
+        return Boolean.parseBoolean(elytraDetectionStates.getOrDefault(buildElytraKey(worldKey, x, z), "false"));
+    }
+
+    public boolean isMarkerOptionEnabled(SeedMapperMarkerOption option) { return enabledMarkerOptions.contains(option); }
+    public void setMarkerOptionEnabled(SeedMapperMarkerOption option, boolean enabled) { if (enabled) enabledMarkerOptions.add(option); else enabledMarkerOptions.remove(option); }
+    private void loadMarkerOptions(String raw) {
+        enabledMarkerOptions.clear();
+        if (raw == null || raw.isBlank()) { enabledMarkerOptions.addAll(java.util.EnumSet.allOf(SeedMapperMarkerOption.class)); return; }
+        for (String id : raw.split(",")) {
+            String trimmed = id.trim();
+            // Older configs used one combined "chest" option. Preserve it by
+            // enabling both of the new chest-specific options.
+            if (trimmed.equals("chest")) {
+                enabledMarkerOptions.add(SeedMapperMarkerOption.SINGLE_CHEST);
+                enabledMarkerOptions.add(SeedMapperMarkerOption.DOUBLE_CHEST);
+                continue;
+            }
+            for (SeedMapperMarkerOption option : SeedMapperMarkerOption.values()) if (option.id().equals(trimmed)) enabledMarkerOptions.add(option);
+        }
+    }
+
+    public void setElytraMissing(String worldKey, int x, int z, boolean missing) {
+        elytraDetectionStates.put(buildElytraKey(worldKey, x, z), Boolean.toString(missing));
+    }
+
+    private String buildElytraKey(String worldKey, int x, int z) {
+        return (worldKey == null ? "unknown" : worldKey) + "|" + x + "|" + z;
     }
 
     public void setCompleted(String worldKey, SeedMapperFeature feature, int x, int z, boolean completed) {

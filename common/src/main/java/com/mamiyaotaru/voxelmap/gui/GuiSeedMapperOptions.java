@@ -24,6 +24,7 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class GuiSeedMapperOptions extends GuiScreenMinimap {
     private final SeedMapperSettingsManager settings;
@@ -34,6 +35,8 @@ public class GuiSeedMapperOptions extends GuiScreenMinimap {
     private GuiButtonText seedInput;
     private GuiButtonText espTargetInput;
     private GuiValueSliderMinimap worldMapMarkerLimitSlider;
+    private GuiValueSliderMinimap minimapIconScaleSlider;
+    private GuiValueSliderMinimap worldMapIconScaleSlider;
     private GuiValueSliderMinimap espChunksSlider;
     private GuiButtonText datapackUrlInput;
 
@@ -110,6 +113,19 @@ public class GuiSeedMapperOptions extends GuiScreenMinimap {
 
         y += rowGap;
 
+        minimapIconScaleSlider = addRenderableWidget(new GuiValueSliderMinimap(left, y, 150, 20,
+                settings.seedMapperMinimapIconScale, 0.5D, 1.25D, value -> {
+            settings.seedMapperMinimapIconScale = value;
+            MapSettingsManager.instance.saveAll();
+        }, value -> "SeedMapper Minimap Icon Scale: " + String.format(Locale.ROOT, "%.2fx", value)));
+        worldMapIconScaleSlider = addRenderableWidget(new GuiValueSliderMinimap(right, y, 150, 20,
+                settings.seedMapperWorldMapIconScale, 0.5D, 1.25D, value -> {
+            settings.seedMapperWorldMapIconScale = value;
+            MapSettingsManager.instance.saveAll();
+        }, value -> "SeedMapper WorldMap Icon Scale: " + String.format(Locale.ROOT, "%.2fx", value)));
+
+        y += rowGap;
+
         locateStructureButton = addRenderableWidget(new Button.Builder(Component.literal("Locate Structure"), button -> {
             applyTextValues();
             minecraft.gui.setScreen(new GuiSeedMapperLocator(this, GuiSeedMapperLocator.Mode.STRUCTURE));
@@ -132,7 +148,7 @@ public class GuiSeedMapperOptions extends GuiScreenMinimap {
             minecraft.gui.setScreen(new GuiSeedMapperLootViewer(this));
         }).bounds(right, y, 150, 20).build());
 
-        y = 214;
+        y = 240;
 
         espTargetInput = new GuiButtonText(font, left, y, fullWidth, 20,
                 Component.literal("ESP Target: " + settings.espTarget),

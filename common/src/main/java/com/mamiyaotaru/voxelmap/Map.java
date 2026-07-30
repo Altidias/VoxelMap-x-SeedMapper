@@ -13,6 +13,8 @@ import com.mamiyaotaru.voxelmap.interfaces.IChangeObserver;
 import com.mamiyaotaru.voxelmap.persistent.GuiPersistentMap;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperLocatorService;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperMarker;
+import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperContainerDetection;
+import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperContainerMarker;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperEspManager;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperCommandHandler;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperSettingsManager;
@@ -124,9 +126,9 @@ public class Map implements Runnable, IChangeObserver {
     private final Identifier resourceSquareMapStencil = Identifier.fromNamespaceAndPath(VoxelConstants.MOD_ID, "images/minimap/square_map_stencil.png");
     private final Identifier resourceRoundMapFrame = Identifier.fromNamespaceAndPath(VoxelConstants.MOD_ID, "images/minimap/round_map_frame.png");
     private final Identifier resourceRoundMapStencil = Identifier.fromNamespaceAndPath(VoxelConstants.MOD_ID, "images/minimap/round_map_stencil.png");
-    private final Identifier resourceNetherPortal = Identifier.fromNamespaceAndPath("minecraft", "textures/block/nether_portal.png");
-    private final Identifier resourceEndPortalFrame = Identifier.fromNamespaceAndPath("minecraft", "textures/block/end_portal_frame_top.png");
-    private final Identifier resourceBedrock = Identifier.fromNamespaceAndPath("minecraft", "textures/block/bedrock.png");
+    private final Identifier resourceNetherPortal = Identifier.fromNamespaceAndPath(VoxelConstants.MOD_ID, "images/seedmapper/feature_icons/nether_portal.png");
+    private final Identifier resourceEndPortalFrame = Identifier.fromNamespaceAndPath(VoxelConstants.MOD_ID, "images/seedmapper/feature_icons/end_portal_frame.png");
+    private final Identifier resourceBedrock = Identifier.fromNamespaceAndPath(VoxelConstants.MOD_ID, "images/seedmapper/feature_icons/end_gateway.png");
     private int scWidth;
     private int scHeight;
     private String message = "";
@@ -1908,6 +1910,7 @@ public class Map implements Runnable, IChangeObserver {
 
             drawPortalMarkersMinimap(context, matrixStack, x, y, lastXDouble, lastZDouble);
             drawSeedMapperMinimapMarkers(context, matrixStack, x, y, lastXDouble, lastZDouble);
+            drawContainerMinimapMarkers(context, matrixStack, x, y, lastXDouble, lastZDouble);
         }
         } finally {
             matrixStack.popMatrix();
@@ -2144,6 +2147,7 @@ public class Map implements Runnable, IChangeObserver {
         float iconSize = datapackStructure
                 ? SeedMapperImportedDatapackManager.iconSizeForMinimap()
                 : 8.0F;
+        iconSize *= (float) seedMapperOptions.seedMapperMinimapIconScale;
         iconSize = Math.max(4.0F, iconSize * seedMapperMinimapIconScale(blockDistance, distantRange));
 
         try {
@@ -2160,6 +2164,11 @@ public class Map implements Runnable, IChangeObserver {
             }
             if (seedMapperOptions.isCompleted(worldKey, marker.feature(), marker.blockX(), marker.blockZ())) {
                 drawCompletedTickOnMinimapMarker(context, matrixStack, x, y, iconSize);
+            }
+            if (marker.feature() == com.mamiyaotaru.voxelmap.seedmapper.SeedMapperFeature.ELYTRA
+                    && seedMapperOptions.elytraDetection
+                    && seedMapperOptions.isElytraMissing(worldKey, marker.blockX(), marker.blockZ())) {
+                drawMissingElytraSlashOnMinimapMarker(context, matrixStack, x, y, iconSize);
             }
         } catch (Exception ignored) {
         } finally {
@@ -2186,6 +2195,89 @@ public class Map implements Runnable, IChangeObserver {
         RenderUtils.submitString(context.order(SUBMIT_MAP_TEXT), matrixStack, COMPLETED_TICK_GLYPH, scaledX + 1.0F, scaledY + 1.0F, MAP_TEXT_DEPTH + 1.0F, 0xCC000000, false);
         RenderUtils.submitString(context.order(SUBMIT_MAP_TEXT), matrixStack, COMPLETED_TICK_GLYPH, scaledX, scaledY, MAP_TEXT_DEPTH + 1.1F, 0xFF2FE85D, false);
 
+        matrixStack.popMatrix();
+    }
+
+    private void drawContainerMinimapMarkers(RenderUtils.SubmitContext context, Matrix4fStack matrixStack, int x, int y, double baseX, double baseZ) {
+        if (!seedMapperOptions.containerDetection && !seedMapperOptions.workstationDetection
+                && !seedMapperOptions.redstoneDetection && !seedMapperOptions.spawnerDetection) {
+            return;
+        }
+        double maxDistance = (options.squareMap ? 42.0D : 34.0D) * zoomScaleAdjusted + 8.0D;
+        double clusterCell = seedMapperOptions.markerClustering && zoomScaleAdjusted > 2.0D
+                ? 8.0D * zoomScaleAdjusted : 1.0D;
+        ArrayList<SeedMapperContainerDetection.ContainerCluster> clusters = new ArrayList<>(
+                SeedMapperContainerDetection.clusterMarkers(clusterCell));
+        clusters.sort(java.util.Comparator.comparingInt(SeedMapperContainerDetection.ContainerCluster::count));
+        for (SeedMapperContainerDetection.ContainerCluster cluster : clusters) {
+            SeedMapperContainerMarker marker = cluster.marker();
+            double dx = baseX - marker.blockX() - 0.5D;
+            double dz = baseZ - marker.blockZ() - 0.5D;
+            if (Math.abs(dx) > maxDistance || Math.abs(dz) > maxDistance) {
+                continue;
+            }
+            double distance = Math.sqrt(dx * dx + dz * dz);
+            float locate = (float) Math.toDegrees(Math.atan2(dx, dz));
+            float hypot = (float) (distance / zoomScaleAdjusted);
+            if (options.rotates) {
+                locate += direction;
+            } else {
+                locate -= rotationFactor;
+            }
+            if (!options.squareMap && hypot >= 31.0F) {
+                continue;
+            }
+            if (options.squareMap) {
+                double rad = Math.toRadians(locate);
+                double px = hypot * Math.sin(rad);
+                double py = -hypot * Math.cos(rad);
+                if (Math.abs(px) > 29.0D || Math.abs(py) > 29.0D) {
+                    continue;
+                }
+            }
+            matrixStack.pushMatrix();
+            matrixStack.rotate(Axis.ZP.rotationDegrees(-locate));
+            matrixStack.translate(0.0F, -hypot, 0.0F);
+            matrixStack.rotate(Axis.ZP.rotationDegrees(locate));
+            // Keep the minimap's entity base size aligned with the persistent
+            // map.  Both views then differ only by their own scale setting,
+            // rather than having an unexplained 2.5px-versus-8px disparity.
+            float entityIconSize = 8.0F * (float) seedMapperOptions.minimapEntityScale;
+            // Use the same alpha-blended GUI path as the world map.  The
+            // depth-tested variant can leave transparent sprite pixels black
+            // on the minimap.
+            RenderType type = VoxelMapRenderTypes.GUI_TEXTURED_NO_DEPTH_TEST.apply(marker.texture());
+            RenderUtils.submitTexturedModalRect(context.order(SUBMIT_MAP_WAYPOINTS), matrixStack, type,
+                    x - entityIconSize / 2.0F, y - entityIconSize / 2.0F, MAP_OVERLAY_DEPTH,
+                    entityIconSize, entityIconSize, 0.0F, 1.0F, 0.0F, 1.0F, 0xFFFFFFFF);
+            if (cluster.count() > 1) {
+                drawContainerMinimapClusterBadge(context, matrixStack, x, y, entityIconSize, cluster.count());
+            }
+            matrixStack.popMatrix();
+        }
+    }
+
+    private void drawContainerMinimapClusterBadge(RenderUtils.SubmitContext context, Matrix4fStack matrixStack,
+                                                   float x, float y, float iconSize, int count) {
+        String text = Integer.toString(count);
+        float textScale = 0.24F;
+        matrixStack.pushMatrix();
+        matrixStack.translate(x + iconSize * 0.38F, y - iconSize * 0.38F, MAP_TEXT_DEPTH + 1.1F);
+        matrixStack.scale(textScale, textScale, 1.0F);
+        RenderUtils.submitPreparedText(context.order(SUBMIT_MAP_TEXT), matrixStack,
+                Component.literal(text).getVisualOrderText(),
+                -this.minecraft.font.width(text) / 2.0F,
+                -this.minecraft.font.lineHeight / 2.0F,
+                0xFFFFFFFF, true, net.minecraft.client.gui.Font.DisplayMode.SEE_THROUGH,
+                0xD0000000, 0x00F000F0);
+        matrixStack.popMatrix();
+    }
+
+    private void drawMissingElytraSlashOnMinimapMarker(RenderUtils.SubmitContext context, Matrix4fStack matrixStack, float centerX, float centerY, float iconSize) {
+        float scale = Mth.clamp(iconSize * 0.11F, 0.65F, 1.0F);
+        matrixStack.pushMatrix();
+        matrixStack.scale(scale, scale, 1.0F);
+        RenderUtils.submitCenteredString(context.order(SUBMIT_MAP_TEXT), matrixStack, "/", centerX / scale, centerY / scale - this.minecraft.font.lineHeight / 2.0F, MAP_TEXT_DEPTH + 1.2F, 0xFFFF2020, true);
         matrixStack.popMatrix();
     }
 
@@ -2357,14 +2449,18 @@ public class Map implements Runnable, IChangeObserver {
             return;
         }
 
-        float iconSize = 8.0F;
+        float iconSize = 8.0F * (float) seedMapperOptions.minimapEntityScale;
         try {
             matrixStack.pushMatrix();
             matrixStack.rotate(Axis.ZP.rotationDegrees(-locate));
             matrixStack.translate(0.0F, -hypot, 0.0F);
             matrixStack.rotate(Axis.ZP.rotationDegrees(locate));
-            RenderType markerRenderType = VoxelMapRenderTypes.GUI_TEXTURED_LEQUAL_DEPTH_TEST.apply(icon);
-            RenderUtils.submitTexturedModalRect(context.order(SUBMIT_MAP_WAYPOINTS), matrixStack, markerRenderType, x - iconSize / 2.0F, y - iconSize / 2.0F, MAP_OVERLAY_DEPTH, iconSize, iconSize, 0xFFFFFFFF);
+            // Portal textures have transparent pixels; the depth-tested path
+            // can turn those pixels into a solid black minimap icon.
+            RenderType markerRenderType = VoxelMapRenderTypes.GUI_TEXTURED_NO_DEPTH_TEST.apply(icon);
+            RenderUtils.submitTexturedModalRect(context.order(SUBMIT_MAP_WAYPOINTS), matrixStack, markerRenderType,
+                    x - iconSize / 2.0F, y - iconSize / 2.0F, MAP_OVERLAY_DEPTH,
+                    iconSize, iconSize, 0.0F, 1.0F, 0.0F, 1.0F, 0xFFFFFFFF);
         } catch (Exception ignored) {
         } finally {
             matrixStack.popMatrix();

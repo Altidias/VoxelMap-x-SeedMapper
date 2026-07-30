@@ -223,11 +223,14 @@ public class PersistentMapSettingsManager implements ISubSettingsManager {
     public boolean literalLineMode = true;
     public boolean showCoordinates = true;
     public boolean showPlayerDirectionArrow = true;
+    public boolean hideMultiworldButton = false;
     public boolean showWaypoints = true;
     public boolean showWaypointNames = true;
     public boolean showDistantWaypoints = true;
     public boolean clusterWaypointNames = true;
     public boolean showNewOldChunks = false;
+    public boolean showExploredChunks = true;
+    public boolean showWorldMapEntities = true;
     public SeedMapStyle seedMapStyle = SeedMapStyle.FLAT;
     private float seedMapContourStrength = 0.55F;
     private float seedMapMinZoom = MIN_SEEDMAP_MIN_ZOOM;
@@ -275,8 +278,11 @@ public class PersistentMapSettingsManager implements ISubSettingsManager {
                     case "Worldmap Show Waypoints In Performance Mode" -> showWaypointsInPerformanceMode = Boolean.parseBoolean(curLine[1]);
                     case "Worldmap Literal Line Mode" -> literalLineMode = Boolean.parseBoolean(curLine[1]);
                     case "Worldmap Show New Old Chunks" -> showNewOldChunks = Boolean.parseBoolean(curLine[1]);
+                    case "Worldmap Show Explored Chunks" -> showExploredChunks = Boolean.parseBoolean(curLine[1]);
+                    case "Worldmap Show Entities" -> showWorldMapEntities = Boolean.parseBoolean(curLine[1]);
                     case "Show Worldmap Coordinates" -> showCoordinates = Boolean.parseBoolean(curLine[1]);
                     case "Show Worldmap Player Direction Arrow" -> showPlayerDirectionArrow = Boolean.parseBoolean(curLine[1]);
+                    case "Hide Worldmap Multiworld Button" -> hideMultiworldButton = Boolean.parseBoolean(curLine[1]);
                     case "Show Worldmap Waypoints" -> showWaypoints = Boolean.parseBoolean(curLine[1]);
                     case "Show Worldmap Waypoint Names" -> showWaypointNames = Boolean.parseBoolean(curLine[1]);
                     case "Show Worldmap Distant Waypoints" -> showDistantWaypoints = Boolean.parseBoolean(curLine[1]);
@@ -347,8 +353,11 @@ public class PersistentMapSettingsManager implements ISubSettingsManager {
         out.println("Worldmap Show Waypoints In Performance Mode:" + showWaypointsInPerformanceMode);
         out.println("Worldmap Literal Line Mode:" + literalLineMode);
         out.println("Worldmap Show New Old Chunks:" + showNewOldChunks);
+        out.println("Worldmap Show Explored Chunks:" + showExploredChunks);
+        out.println("Worldmap Show Entities:" + showWorldMapEntities);
         out.println("Show Worldmap Coordinates:" + showCoordinates);
         out.println("Show Worldmap Player Direction Arrow:" + showPlayerDirectionArrow);
+        out.println("Hide Worldmap Multiworld Button:" + hideMultiworldButton);
         out.println("Show Worldmap Waypoints:" + showWaypoints);
         out.println("Show Worldmap Waypoint Names:" + showWaypointNames);
         out.println("Show Worldmap Distant Waypoints:" + showDistantWaypoints);
@@ -396,6 +405,7 @@ public class PersistentMapSettingsManager implements ISubSettingsManager {
         return switch (option) {
             case SHOW_WORLDMAP_COORDS -> showCoordinates;
             case SHOW_WORLDMAP_PLAYER_DIRECTION_ARROW -> showPlayerDirectionArrow;
+            case WORLDMAP_HIDE_MULTIWORLD_BUTTON -> hideMultiworldButton;
             case SHOW_WAYPOINTS -> showWaypoints && VoxelConstants.getVoxelMapInstance().getMapOptions().waypointsAllowed;
             case SHOW_WAYPOINT_NAMES -> showWaypointNames && VoxelConstants.getVoxelMapInstance().getMapOptions().waypointsAllowed;
             case SHOW_DISTANT_WAYPOINTS -> showDistantWaypoints && VoxelConstants.getVoxelMapInstance().getMapOptions().waypointsAllowed;
@@ -415,6 +425,7 @@ public class PersistentMapSettingsManager implements ISubSettingsManager {
         switch (option) {
             case SHOW_WORLDMAP_COORDS -> showCoordinates = !showCoordinates;
             case SHOW_WORLDMAP_PLAYER_DIRECTION_ARROW -> showPlayerDirectionArrow = !showPlayerDirectionArrow;
+            case WORLDMAP_HIDE_MULTIWORLD_BUTTON -> hideMultiworldButton = !hideMultiworldButton;
             case SHOW_WAYPOINTS -> showWaypoints = !showWaypoints;
             case SHOW_WAYPOINT_NAMES -> showWaypointNames = !showWaypointNames;
             case SHOW_DISTANT_WAYPOINTS -> showDistantWaypoints = !showDistantWaypoints;

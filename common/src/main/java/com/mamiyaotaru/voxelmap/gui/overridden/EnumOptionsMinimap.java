@@ -77,6 +77,7 @@ public enum EnumOptionsMinimap {
     // World Map
     SHOW_WORLDMAP_COORDS("options.worldmap.showCoordinates", Type.BOOLEAN),
     SHOW_WORLDMAP_PLAYER_DIRECTION_ARROW("options.worldmap.showPlayerDirectionArrow", Type.BOOLEAN),
+    WORLDMAP_HIDE_MULTIWORLD_BUTTON("options.worldmap.hideMultiworldButton", Type.BOOLEAN),
     SHOW_WAYPOINTS("options.worldmap.showWaypoints", Type.BOOLEAN),
     SHOW_WAYPOINT_NAMES("options.worldmap.showWaypointNames", Type.BOOLEAN),
     SHOW_DISTANT_WAYPOINTS("options.worldmap.showDistantWaypoints", Type.BOOLEAN),

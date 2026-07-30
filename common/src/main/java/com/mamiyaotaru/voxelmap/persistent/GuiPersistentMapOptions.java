@@ -61,9 +61,11 @@ public class GuiPersistentMapOptions extends GuiScreenMinimap {
     public void init() {
         optionSections.clear();
 
-        addSection("Map Display", 0, 1);
+        addSection("Map Display", 0, 2);
         addMappedOption(EnumOptionsMinimap.SHOW_WORLDMAP_COORDS, 0, 0);
         addMappedOption(EnumOptionsMinimap.SHOW_WORLDMAP_PLAYER_DIRECTION_ARROW, 0, 1);
+        addMappedOption(EnumOptionsMinimap.WORLDMAP_HIDE_MULTIWORLD_BUTTON, 2, 0);
+        addMappedOption(EnumOptionsMinimap.WORLDMAP_SHOW_WAYPOINTS_IN_PERFORMANCE_MODE, 2, 1);
         addMappedOption(EnumOptionsMinimap.WORLDMAP_LITERAL_LINE_MODE, 1, 0);
         addMappedOption(EnumOptionsMinimap.CONFIRM_WAYPOINT_DELETE, 1, 1);
 
@@ -72,7 +74,6 @@ public class GuiPersistentMapOptions extends GuiScreenMinimap {
         addMappedOption(EnumOptionsMinimap.SHOW_WAYPOINT_NAMES, 3, 1);
         addMappedOption(EnumOptionsMinimap.SHOW_DISTANT_WAYPOINTS, 4, 0);
         addMappedOption(EnumOptionsMinimap.WORLDMAP_CLUSTER_WAYPOINTS, 4, 1);
-        addMappedOption(EnumOptionsMinimap.WORLDMAP_SHOW_WAYPOINTS_IN_PERFORMANCE_MODE, 5, 1);
 
         addSection("Zoom & Performance", 6, 9);
         addMappedOption(EnumOptionsMinimap.MIN_ZOOM, 6, 0);

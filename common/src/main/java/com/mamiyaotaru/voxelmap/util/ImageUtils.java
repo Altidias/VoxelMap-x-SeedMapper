@@ -17,6 +17,7 @@ import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.ArrayDeque;
 import javax.imageio.ImageIO;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.AbstractTexture;
@@ -601,6 +602,48 @@ public class ImageUtils {
         }
 
         return image.getSubimage(left, top, right - left + 1, bottom - top + 1);
+    }
+
+    /**
+     * Removes an opaque pure-black background when it is connected to the
+     * image boundary. Some GPU entity render targets return their cleared
+     * transparent pixels as opaque black during readback; flood-filling from
+     * the boundary avoids removing legitimate black pixels inside the mob.
+     */
+    public static BufferedImage clearConnectedBlackBackground(BufferedImage image) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+        boolean[] visited = new boolean[width * height];
+        ArrayDeque<Integer> queue = new ArrayDeque<>();
+
+        for (int x = 0; x < width; x++) {
+            queue.add(x);
+            queue.add((height - 1) * width + x);
+        }
+        for (int y = 1; y < height - 1; y++) {
+            queue.add(y * width);
+            queue.add(y * width + width - 1);
+        }
+
+        while (!queue.isEmpty()) {
+            int index = queue.removeFirst();
+            if (visited[index]) {
+                continue;
+            }
+            visited[index] = true;
+            int x = index % width;
+            int y = index / width;
+            int color = image.getRGB(x, y);
+            if ((color >>> 24) == 0 || ((color >>> 16) & 0xFF) > 4 || ((color >>> 8) & 0xFF) > 4 || (color & 0xFF) > 4) {
+                continue;
+            }
+            image.setRGB(x, y, color & 0x00FFFFFF);
+            if (x > 0) queue.add(index - 1);
+            if (x + 1 < width) queue.add(index + 1);
+            if (y > 0) queue.add(index - width);
+            if (y + 1 < height) queue.add(index + width);
+        }
+        return image;
     }
 
     public static BufferedImage trimCentered(BufferedImage image) {

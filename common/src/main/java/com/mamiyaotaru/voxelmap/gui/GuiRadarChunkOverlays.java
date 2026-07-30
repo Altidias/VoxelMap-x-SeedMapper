@@ -48,6 +48,7 @@ public class GuiRadarChunkOverlays extends GuiScreenMinimap {
     private Button oldColorPickerButton;
     private Button blockColorPickerButton;
     private Button exploredToggle;
+    private Button worldMapExploredToggle;
     private Button newerToggle;
     private Button chunkGridToggle;
     private Button slimeChunksToggle;
@@ -72,7 +73,6 @@ public class GuiRadarChunkOverlays extends GuiScreenMinimap {
     private ColorTarget activeColorTarget;
     private boolean swallowNextMouseRelease;
     private boolean syncPage;
-    private Button overlayPageButton;
     private Button syncPageButton;
     private Button hostButton;
     private EditBox keyInput;
@@ -100,12 +100,10 @@ public class GuiRadarChunkOverlays extends GuiScreenMinimap {
 
     @Override
     public void init() {
-        overlayPageButton = addRenderableWidget(new Button.Builder(Component.literal("Overlay Options"), button -> switchPage(false))
-                .bounds(this.width / 2 - 155, 58, 150, 20).build());
-        syncPageButton = addRenderableWidget(new Button.Builder(Component.literal("Chunk Sync"), button -> switchPage(true))
-                .bounds(this.width / 2 + 5, 58, 150, 20).build());
-        overlayPageButton.active = syncPage;
-        syncPageButton.active = !syncPage;
+        syncPageButton = addRenderableWidget(new Button.Builder(
+                        Component.literal(syncPage ? "Chunks" : "Chunk Sync"),
+                        button -> switchPage(!syncPage))
+                .bounds(this.width / 2 - 75, 58, 150, 20).build());
         if (syncPage) {
             initSyncPage();
             return;
@@ -134,11 +132,16 @@ public class GuiRadarChunkOverlays extends GuiScreenMinimap {
         }).bounds(right, y, 150, 20).build());
 
         y = 154;
+        worldMapExploredToggle = addRenderableWidget(new Button.Builder(Component.empty(), button -> {
+            worldMapSettings.showExploredChunks = !worldMapSettings.showExploredChunks;
+            worldMapSettings.saveAll();
+            refreshLabels();
+        }).bounds(left, y, 150, 20).build());
         worldMapNewOldToggle = addRenderableWidget(new Button.Builder(Component.empty(), button -> {
             worldMapSettings.toggleBooleanValue(EnumOptionsMinimap.WORLDMAP_SHOW_NEW_OLD_CHUNKS);
             worldMapSettings.saveAll();
             refreshLabels();
-        }).bounds(left, y, 310, 20).build());
+        }).bounds(right, y, 150, 20).build());
 
         y = 196;
         liquidToggle = addRenderableWidget(new Button.Builder(Component.empty(), button -> {
@@ -442,7 +445,8 @@ public class GuiRadarChunkOverlays extends GuiScreenMinimap {
         newerToggle.setMessage(Component.literal("New Chunk Detector: " + (settings.showNewerNewChunks ? "ON" : "OFF")));
         chunkGridToggle.setMessage(Component.literal("Chunk Grid: " + (mapSettings.chunkGrid ? "ON" : "OFF")));
         slimeChunksToggle.setMessage(Component.literal("Slime Chunks: " + (mapSettings.slimeChunks ? "ON" : "OFF")));
-        slimeChunksToggle.active = minecraft.hasSingleplayerServer() || !VoxelConstants.getVoxelMapInstance().getWorldSeed().isEmpty();
+        slimeChunksToggle.active = hasSlimeChunkSeed();
+        worldMapExploredToggle.setMessage(Component.literal("World Map Explored: " + (worldMapSettings.showExploredChunks ? "ON" : "OFF")));
         worldMapNewOldToggle.setMessage(Component.literal("World Map New/Old Chunk Overlay: "
                 + (worldMapSettings.getBooleanValue(EnumOptionsMinimap.WORLDMAP_SHOW_NEW_OLD_CHUNKS) ? "ON" : "OFF")));
         liquidToggle.setMessage(Component.literal("Liquid Exploit: " + (settings.newerNewChunksLiquidExploit ? "ON" : "OFF")));
@@ -470,6 +474,13 @@ public class GuiRadarChunkOverlays extends GuiScreenMinimap {
                     : "Clear New Chunks"));
             clearNewerNewChunksButton.active = settings.showNewerNewChunks;
         }
+    }
+
+    private boolean hasSlimeChunkSeed() {
+        String manualSeed = VoxelConstants.getVoxelMapInstance().getSeedMapperOptions().manualSeed;
+        return minecraft.hasSingleplayerServer()
+                || !VoxelConstants.getVoxelMapInstance().getWorldSeed().isEmpty()
+                || (manualSeed != null && !manualSeed.isBlank());
     }
 
     private void saveValues() {

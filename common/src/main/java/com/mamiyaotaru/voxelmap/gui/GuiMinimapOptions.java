@@ -84,6 +84,12 @@ public class GuiMinimapOptions extends GuiScreenMinimap {
     private Button netherPortalGeneralButton;
     private Button endPortalGeneralButton;
     private Button endGatewayGeneralButton;
+    private Button elytraDetectionButton;
+    private Button containerDetectionButton;
+    private Button spawnerDetectionButton;
+    private Button markerClusteringButton;
+    private Button markerPersistenceButton;
+    private Button containerDetectionOptionsButton, workstationDetectionButton, workstationDetectionOptionsButton, redstoneDetectionButton, redstoneDetectionOptionsButton, spawnerDetectionOptionsButton;
     private Button chunkOverlayButton;
     private Button seedMapperBorderMarkersButton;
     private Button highlightTracerGeneralButton;
@@ -101,7 +107,11 @@ public class GuiMinimapOptions extends GuiScreenMinimap {
     private boolean tracerColorPickerOpen;
     private boolean swallowTracerColorMouseRelease;
     private GuiValueSliderMinimap radarTextScaleSlider;
+    private GuiValueSliderMinimap mapEntityScaleSlider;
+    private GuiValueSliderMinimap minimapEntityScaleSlider;
+    private GuiValueSliderMinimap worldMapEntityLimitSlider;
     private static final int OPTION_BUTTON_WIDTH = 190;
+    private static final int MARKER_BUTTON_WIDTH = OPTION_BUTTON_WIDTH - 32;
     private static final int OPTION_COLUMN_GAP = 10;
     private static final int FULL_ROW_WIDTH = OPTION_BUTTON_WIDTH * 2 + OPTION_COLUMN_GAP;
 
@@ -178,6 +188,12 @@ public class GuiMinimapOptions extends GuiScreenMinimap {
         netherPortalGeneralButton = null;
         endPortalGeneralButton = null;
         endGatewayGeneralButton = null;
+        elytraDetectionButton = null;
+        containerDetectionButton = null;
+        spawnerDetectionButton = null;
+        containerDetectionOptionsButton = workstationDetectionButton = workstationDetectionOptionsButton = redstoneDetectionButton = redstoneDetectionOptionsButton = spawnerDetectionOptionsButton = null;
+        markerClusteringButton = null;
+        markerPersistenceButton = null;
         chunkOverlayButton = null;
         seedMapperBorderMarkersButton = null;
         highlightTracerGeneralButton = null;
@@ -188,6 +204,9 @@ public class GuiMinimapOptions extends GuiScreenMinimap {
         seedMapperBorderRangeSlider = null;
         minimapZoomSlider = null;
         radarTextScaleSlider = null;
+        mapEntityScaleSlider = null;
+        minimapEntityScaleSlider = null;
+        worldMapEntityLimitSlider = null;
         tracerColorInput = null;
         tracerColorPickerOpen = false;
         for (GuiEventListener widget : optionButtons) {
@@ -373,7 +392,7 @@ public class GuiMinimapOptions extends GuiScreenMinimap {
                 row++;
             }
 
-            addSection("Entity Display & Markers", row + 1, row + 4);
+            addSection("Entity Display & Markers", row + 1, row + 8);
             row++;
             int actionY = fromSlot(row, 0)[1];
             if (relevantOptions == RADAR_FULL_OPTIONS) {
@@ -399,13 +418,95 @@ public class GuiMinimapOptions extends GuiScreenMinimap {
             });
             endPortalGeneralButton.setMessage(Component.literal("End Portals: " + (mapOptions.showEndPortalMarkers ? "ON" : "OFF")));
             addOptionButton(endPortalGeneralButton);
-            endGatewayGeneralButton = createModernButton(relevantOptions == RADAR_FULL_OPTIONS ? right : left, actionY, OPTION_BUTTON_WIDTH, Component.empty(), button -> {
+        endGatewayGeneralButton = createModernButton(relevantOptions == RADAR_FULL_OPTIONS ? right : left, actionY, OPTION_BUTTON_WIDTH, Component.empty(), button -> {
                 mapOptions.showEndGatewayMarkers = !mapOptions.showEndGatewayMarkers;
                 button.setMessage(Component.literal("End Gateways: " + (mapOptions.showEndGatewayMarkers ? "ON" : "OFF")));
                 MapSettingsManager.instance.saveAll();
             });
             endGatewayGeneralButton.setMessage(Component.literal("End Gateways: " + (mapOptions.showEndGatewayMarkers ? "ON" : "OFF")));
             addOptionButton(endGatewayGeneralButton);
+
+            actionY += 22;
+            elytraDetectionButton = createModernButton(left, actionY, OPTION_BUTTON_WIDTH, Component.empty(), button -> {
+                seedMapperOptions.elytraDetection = !seedMapperOptions.elytraDetection;
+                updateElytraDetectionWidget();
+                MapSettingsManager.instance.saveAll();
+            });
+            updateElytraDetectionWidget();
+            addOptionButton(elytraDetectionButton);
+
+            markerClusteringButton = createModernButton(right, actionY, OPTION_BUTTON_WIDTH, Component.empty(), button -> {
+                seedMapperOptions.markerClustering = !seedMapperOptions.markerClustering;
+                updateMarkerClusteringWidget();
+                MapSettingsManager.instance.saveAll();
+            });
+            updateMarkerClusteringWidget();
+            addOptionButton(markerClusteringButton);
+
+            actionY += 22;
+            containerDetectionButton = createModernButton(left, actionY, MARKER_BUTTON_WIDTH, Component.empty(), button -> {
+                seedMapperOptions.containerDetection = !seedMapperOptions.containerDetection;
+                updateContainerDetectionWidget();
+                MapSettingsManager.instance.saveAll();
+            });
+            updateContainerDetectionWidget();
+            addOptionButton(containerDetectionButton);
+            containerDetectionOptionsButton = createModernButton(left + OPTION_BUTTON_WIDTH - 28, actionY, 28, Component.literal("..."), button -> minecraft.gui.setScreen(new GuiSeedMapperMarkerOptions(this, com.mamiyaotaru.voxelmap.seedmapper.SeedMapperMarkerOption.Category.CONTAINERS)));
+            addOptionButton(containerDetectionOptionsButton);
+            workstationDetectionButton = createModernButton(right, actionY, MARKER_BUTTON_WIDTH, Component.literal("Workstations: OFF"), button -> { seedMapperOptions.workstationDetection = !seedMapperOptions.workstationDetection; updateWorkstationDetectionWidget(); MapSettingsManager.instance.saveAll(); });
+            updateWorkstationDetectionWidget(); addOptionButton(workstationDetectionButton);
+            workstationDetectionOptionsButton = createModernButton(right + OPTION_BUTTON_WIDTH - 28, actionY, 28, Component.literal("..."), button -> minecraft.gui.setScreen(new GuiSeedMapperMarkerOptions(this, com.mamiyaotaru.voxelmap.seedmapper.SeedMapperMarkerOption.Category.WORKSTATIONS)));
+            addOptionButton(workstationDetectionOptionsButton);
+            actionY += 22;
+            redstoneDetectionButton = createModernButton(left, actionY, MARKER_BUTTON_WIDTH, Component.literal("Redstone: OFF"), button -> { seedMapperOptions.redstoneDetection = !seedMapperOptions.redstoneDetection; updateRedstoneDetectionWidget(); MapSettingsManager.instance.saveAll(); });
+            updateRedstoneDetectionWidget(); addOptionButton(redstoneDetectionButton);
+            redstoneDetectionOptionsButton = createModernButton(left + OPTION_BUTTON_WIDTH - 28, actionY, 28, Component.literal("..."), button -> minecraft.gui.setScreen(new GuiSeedMapperMarkerOptions(this, com.mamiyaotaru.voxelmap.seedmapper.SeedMapperMarkerOption.Category.REDSTONE)));
+            addOptionButton(redstoneDetectionOptionsButton);
+            spawnerDetectionButton = createModernButton(right, actionY, MARKER_BUTTON_WIDTH, Component.empty(), button -> {
+                seedMapperOptions.spawnerDetection = !seedMapperOptions.spawnerDetection;
+                updateSpawnerDetectionWidget();
+                MapSettingsManager.instance.saveAll();
+            });
+            updateSpawnerDetectionWidget();
+            addOptionButton(spawnerDetectionButton);
+            spawnerDetectionOptionsButton = createModernButton(right + OPTION_BUTTON_WIDTH - 28, actionY, 28, Component.literal("..."), button -> minecraft.gui.setScreen(new GuiSeedMapperMarkerOptions(this, com.mamiyaotaru.voxelmap.seedmapper.SeedMapperMarkerOption.Category.SPAWNERS)));
+            addOptionButton(spawnerDetectionOptionsButton);
+
+            actionY += 22;
+            mapEntityScaleSlider = new GuiValueSliderMinimap(left, actionY, OPTION_BUTTON_WIDTH, 20,
+                    Math.min(seedMapperOptions.mapEntityScale, 2.0D), 0.5D, 2.0D, value -> {
+                seedMapperOptions.mapEntityScale = value;
+                MapSettingsManager.instance.saveAll();
+            }, value -> "Map Entities Scale: " + String.format(Locale.ROOT, "%.2fx", value));
+            addOptionButton(mapEntityScaleSlider);
+            minimapEntityScaleSlider = new GuiValueSliderMinimap(right, actionY, OPTION_BUTTON_WIDTH, 20,
+                    Math.min(seedMapperOptions.minimapEntityScale, 1.2D), 0.5D, 1.2D, value -> {
+                seedMapperOptions.minimapEntityScale = value;
+                MapSettingsManager.instance.saveAll();
+            }, value -> "Minimap Entities Scale: " + String.format(Locale.ROOT, "%.2fx", value));
+            addOptionButton(minimapEntityScaleSlider);
+
+            actionY += 22;
+            markerPersistenceButton = createModernButton(left, actionY, FULL_ROW_WIDTH, Component.empty(), button -> {
+                seedMapperOptions.markerPersistence = !seedMapperOptions.markerPersistence;
+                updateMarkerPersistenceWidget();
+                MapSettingsManager.instance.saveAll();
+            });
+            updateMarkerPersistenceWidget();
+            addOptionButton(markerPersistenceButton);
+
+            actionY += 22;
+            double entityLimitSliderValue = seedMapperOptions.worldMapEntityLimit == 0
+                    ? 10000.0D : seedMapperOptions.worldMapEntityLimit;
+            worldMapEntityLimitSlider = new GuiValueSliderMinimap(left, actionY, FULL_ROW_WIDTH, 20,
+                    entityLimitSliderValue, 200.0D, 10000.0D, value -> {
+                int limit = ((int) Math.round(value / 100.0D)) * 100;
+                seedMapperOptions.worldMapEntityLimit = limit >= 10000 ? 0 : Math.max(200, limit);
+                MapSettingsManager.instance.saveAll();
+            }, value -> value >= 9950.0D
+                    ? "World Map Entity Limit: No limit"
+                    : "World Map Entity Limit: " + ((int) Math.round(value / 100.0D) * 100));
+            addOptionButton(worldMapEntityLimitSlider);
         }
 
         layoutPageNavigation(0);
@@ -635,7 +736,7 @@ public class GuiMinimapOptions extends GuiScreenMinimap {
                 case HIDE_MINIMAP -> button2.active = mapOptions.minimapAllowed;
                 case IN_GAME_WAYPOINTS -> button2.active = mapOptions.waypointsAllowed;
                 case CAVE_MODE -> button2.active = mapOptions.cavesAllowed;
-                case SLIME_CHUNKS -> button2.active = minecraft.hasSingleplayerServer() || !voxelMap.getWorldSeed().isEmpty();
+                case SLIME_CHUNKS -> button2.active = hasSlimeChunkSeed();
                 case SHOW_RADAR -> button2.active = !radarBlocked;
                 case SHOW_PLAYERS -> button2.active = button2.active && radarOptions.radarPlayersAllowed;
                 case SHOW_MOBS -> button2.active = button2.active && radarOptions.radarMobsAllowed;
@@ -653,6 +754,23 @@ public class GuiMinimapOptions extends GuiScreenMinimap {
         if (endGatewayGeneralButton != null) {
             endGatewayGeneralButton.active = mapOptions.minimapAllowed;
         }
+        if (elytraDetectionButton != null) {
+            elytraDetectionButton.active = mapOptions.minimapAllowed;
+        }
+        if (containerDetectionButton != null) {
+            containerDetectionButton.active = mapOptions.minimapAllowed;
+        }
+        if (spawnerDetectionButton != null) {
+            spawnerDetectionButton.active = mapOptions.minimapAllowed;
+        }
+        if (containerDetectionOptionsButton != null) containerDetectionOptionsButton.active = mapOptions.minimapAllowed;
+        if (workstationDetectionButton != null) workstationDetectionButton.active = mapOptions.minimapAllowed;
+        if (workstationDetectionOptionsButton != null) workstationDetectionOptionsButton.active = mapOptions.minimapAllowed;
+        if (redstoneDetectionButton != null) redstoneDetectionButton.active = mapOptions.minimapAllowed;
+        if (redstoneDetectionOptionsButton != null) redstoneDetectionOptionsButton.active = mapOptions.minimapAllowed;
+        if (spawnerDetectionOptionsButton != null) spawnerDetectionOptionsButton.active = mapOptions.minimapAllowed;
+        if (markerClusteringButton != null) markerClusteringButton.active = mapOptions.minimapAllowed;
+        if (markerPersistenceButton != null) markerPersistenceButton.active = mapOptions.minimapAllowed;
         if (chunkOverlayButton != null) {
             chunkOverlayButton.active = mapOptions.minimapAllowed;
         }
@@ -671,6 +789,9 @@ public class GuiMinimapOptions extends GuiScreenMinimap {
         if (radarTextScaleSlider != null) {
             radarTextScaleSlider.active = mapOptions.minimapAllowed;
         }
+        if (mapEntityScaleSlider != null) mapEntityScaleSlider.active = mapOptions.minimapAllowed;
+        if (minimapEntityScaleSlider != null) minimapEntityScaleSlider.active = mapOptions.minimapAllowed;
+        if (worldMapEntityLimitSlider != null) worldMapEntityLimitSlider.active = mapOptions.minimapAllowed;
         if (autoHideHighlightsDistanceSlider != null) {
             autoHideHighlightsDistanceSlider.active = mapOptions.minimapAllowed && mapOptions.autoHideHighlightsWhenNear;
         }
@@ -793,9 +914,36 @@ public class GuiMinimapOptions extends GuiScreenMinimap {
         }
     }
 
+    private void updateElytraDetectionWidget() {
+        if (elytraDetectionButton != null) {
+            elytraDetectionButton.setMessage(Component.literal("Elytra Detection: " + (seedMapperOptions.elytraDetection ? "ON" : "OFF")));
+        }
+    }
+
+    private void updateContainerDetectionWidget() {
+        if (containerDetectionButton != null) {
+            containerDetectionButton.setMessage(Component.literal("Container Detection: " + (seedMapperOptions.containerDetection ? "ON" : "OFF")));
+        }
+    }
+
+    private void updateSpawnerDetectionWidget() {
+        if (spawnerDetectionButton != null) {
+            spawnerDetectionButton.setMessage(Component.literal("Mob Spawners: " + (seedMapperOptions.spawnerDetection ? "ON" : "OFF")));
+        }
+    }
+
+    private void updateWorkstationDetectionWidget() { if (workstationDetectionButton != null) workstationDetectionButton.setMessage(Component.literal("Workstations: " + (seedMapperOptions.workstationDetection ? "ON" : "OFF"))); }
+    private void updateRedstoneDetectionWidget() { if (redstoneDetectionButton != null) redstoneDetectionButton.setMessage(Component.literal("Redstone: " + (seedMapperOptions.redstoneDetection ? "ON" : "OFF"))); }
+    private void updateMarkerClusteringWidget() { if (markerClusteringButton != null) markerClusteringButton.setMessage(Component.literal("Marker Clustering: " + (seedMapperOptions.markerClustering ? "ON" : "OFF"))); }
+    private void updateMarkerPersistenceWidget() { if (markerPersistenceButton != null) markerPersistenceButton.setMessage(Component.literal("Marker Persistence: " + (seedMapperOptions.markerPersistence ? "ON" : "OFF"))); }
+
     private void updateMinimapZoomSlider() {
         if (minimapZoomSlider != null) {
             minimapZoomSlider.setActualValue(mapOptions.zoom);
+        }
+        if (worldMapEntityLimitSlider != null) {
+            worldMapEntityLimitSlider.setActualValue(seedMapperOptions.worldMapEntityLimit == 0
+                    ? 10000.0D : seedMapperOptions.worldMapEntityLimit);
         }
     }
 
@@ -1054,9 +1202,15 @@ public class GuiMinimapOptions extends GuiScreenMinimap {
             voxelMap.getMap().forceFullRender(true);
         }
         if (slimeChunksButton != null) {
-            slimeChunksButton.active = minecraft.hasSingleplayerServer() || !voxelMap.getWorldSeed().isEmpty();
+            slimeChunksButton.active = hasSlimeChunkSeed();
         }
 
+    }
+
+    private boolean hasSlimeChunkSeed() {
+        return minecraft.hasSingleplayerServer()
+                || !voxelMap.getWorldSeed().isEmpty()
+                || (seedMapperOptions.manualSeed != null && !seedMapperOptions.manualSeed.isBlank());
     }
 
     private void newTeleportCommand() {

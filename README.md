@@ -14,6 +14,22 @@ VoxelMap x SeedMapper is a heavily modified fork of [VoxelMap Updated](https://g
 - Added saved seeds, manual seed input, and per-world/per-server SeedMapper state.
 - Added bundled cubiomes support ([SeedMapper's Fork](https://github.com/xpple/cubiomes)).
 
+### Entity Display & Markers
+- Added live loaded-chunk detection for containers, workstations, redstone components, spawners, and trial spawners on both the minimap and fullscreen world map.
+- Container filters include single chests, double chests, trapped chests, ender chests, shulker boxes, barrels, hoppers, dispensers, droppers, brewing stands, and crafters.
+- Each category can be enabled independently, with a `...` submenu for choosing individual block types.
+- Added Elytra Detection: End-ship markers receive a red slash when the item frame no longer contains an elytra, including after a player removes it.
+- Added optional marker clustering: matching nearby markers collapse to one Minecraft icon with a white count, then separate again while zooming in.
+- Added optional Marker Persistence. Detected markers are stored per server and dimension, restored after reconnecting, and updated when their chunk is rescanned.
+- Added live block/chunk update hooks so loaded entities update without waiting for a full render-distance sweep.
+
+![Entities](https://i.imgur.com/ijTzp7d.png)
+
+#### Map Icon Scaling
+- Added separate `Map Entities Scale` and `Minimap Entities Scale` controls for portals, end portals, end gateways, containers, workstations, redstone, and spawners.
+- Minimap entity scale defaults to `0.6x` and is capped at `1.2x`; fullscreen map entity scale remains independent.
+- Added separate SeedMapper structure-icon scale controls for the minimap and fullscreen world map under SeedMapper's World and Structures settings.
+
 ### SeedMap
 ![SeedMap](https://i.imgur.com/XikKPVK.png)
 
@@ -89,6 +105,7 @@ Common commands:
 - Added configurable transport shortcuts for teleport, flight, pathing, and other client/server commands.
 - Added transport shortcut controls for excluding Y coordinates and showing all shortcuts in the main menu.
 - Transport shortcut names, commands, visibility, and client-command flags persist across launches.
+- Added persistent world-map plot lines with editing, duplication, deletion, color, thickness, and cross-dimension support.
 - Added visible-area export support.
 - Added coordinate recentering/editing and player recenter action.
 - Added deep zoom-out and performance-mode behavior improvements.

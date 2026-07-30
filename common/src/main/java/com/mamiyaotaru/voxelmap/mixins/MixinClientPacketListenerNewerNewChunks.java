@@ -23,6 +23,7 @@ public abstract class MixinClientPacketListenerNewerNewChunks {
 
         VoxelConstants.getVoxelMapInstance().getNewerNewChunksManager()
                 .onChunkDataPacket(packet.getX(), packet.getZ());
+        com.mamiyaotaru.voxelmap.seedmapper.SeedMapperContainerDetection.onChunkLoaded(packet.getX(), packet.getZ());
     }
 
     @Inject(method = "handleBlockUpdate", at = @At("RETURN"))
@@ -42,11 +43,15 @@ public abstract class MixinClientPacketListenerNewerNewChunks {
                 || mapOptions.showNetherPortalMarkers
                 || mapOptions.showEndPortalMarkers
                 || mapOptions.showEndGatewayMarkers;
-        if (!useChunkExploits && !usePortalTracking) {
+        var seedMapper = VoxelConstants.getVoxelMapInstance().getSeedMapperOptions();
+        boolean useMarkerTracking = seedMapper != null && (seedMapper.containerDetection
+                || seedMapper.spawnerDetection || seedMapper.workstationDetection || seedMapper.redstoneDetection);
+        if (!useChunkExploits && !usePortalTracking && !useMarkerTracking) {
             return;
         }
 
         BlockPos pos = packet.getPos();
+        com.mamiyaotaru.voxelmap.seedmapper.SeedMapperContainerDetection.onBlockUpdated(pos);
         if (useChunkExploits) {
             VoxelConstants.getVoxelMapInstance().getNewerNewChunksManager().onBlockUpdated(
                     pos,
@@ -76,11 +81,15 @@ public abstract class MixinClientPacketListenerNewerNewChunks {
                 || mapOptions.showNetherPortalMarkers
                 || mapOptions.showEndPortalMarkers
                 || mapOptions.showEndGatewayMarkers;
-        if (!useChunkExploits && !usePortalTracking) {
+        var seedMapper = VoxelConstants.getVoxelMapInstance().getSeedMapperOptions();
+        boolean useMarkerTracking = seedMapper != null && (seedMapper.containerDetection
+                || seedMapper.spawnerDetection || seedMapper.workstationDetection || seedMapper.redstoneDetection);
+        if (!useChunkExploits && !usePortalTracking && !useMarkerTracking) {
             return;
         }
 
         packet.runUpdates((BlockPos pos, BlockState state) -> {
+            com.mamiyaotaru.voxelmap.seedmapper.SeedMapperContainerDetection.onBlockUpdated(pos);
             if (useChunkExploits) {
                 VoxelConstants.getVoxelMapInstance().getNewerNewChunksManager().onChunkDeltaUpdated(
                         pos,

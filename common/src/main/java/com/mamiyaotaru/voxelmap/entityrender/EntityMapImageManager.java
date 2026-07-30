@@ -423,6 +423,7 @@ public class EntityMapImageManager {
                 default -> {}
             }
 
+            image = ImageUtils.clearConnectedBlackBackground(image);
             float uniqueMobScale = getUniqueMobScale(entity);
             image = ImageUtils.trim(image);
             image = ImageUtils.scaleImage(image, scale / uniqueMobScale);

@@ -187,6 +187,9 @@ public class VoxelMap implements PreparableReloadListener {
 
         ClientLevel newWorld = GameVariableAccessShim.getWorld();
         if (world != newWorld) {
+            if (world != null) {
+                com.mamiyaotaru.voxelmap.seedmapper.SeedMapperContainerDetection.flushPersistence();
+            }
             world = newWorld;
             waypointManager.newWorld(world);
             persistentMap.newWorld(world);
@@ -211,6 +214,8 @@ public class VoxelMap implements PreparableReloadListener {
         exploredChunksManager.onTick();
         newerNewChunksManager.onTick();
         portalMarkersManager.onTick();
+        com.mamiyaotaru.voxelmap.seedmapper.SeedMapperElytraDetection.tick();
+        com.mamiyaotaru.voxelmap.seedmapper.SeedMapperContainerDetection.tick();
         persistentMap.onTick();
     }
 
@@ -409,6 +414,7 @@ public class VoxelMap implements PreparableReloadListener {
     }
 
     public void onDisconnect() {
+        com.mamiyaotaru.voxelmap.seedmapper.SeedMapperContainerDetection.flushPersistence();
         clearServerSettings();
     }
 

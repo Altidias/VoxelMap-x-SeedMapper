@@ -18,6 +18,7 @@ public abstract class MixinClientLevel {
         }
 
         var mapOptions = VoxelConstants.getVoxelMapInstance().getMapOptions();
+        com.mamiyaotaru.voxelmap.seedmapper.SeedMapperContainerDetection.onBlockUpdated(pos);
 
         boolean usePortalTracking = mapOptions.autoPortalWaypoints
                 || mapOptions.showNetherPortalMarkers

@@ -26,6 +26,8 @@ import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperFeature;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperLocatorService;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperLootService;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperMarker;
+import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperContainerDetection;
+import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperContainerMarker;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperSettingsManager;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperCompat;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperCommandHandler;
@@ -172,6 +174,9 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
     long timeOfZoom;
     float zoomDirectX;
     float zoomDirectY;
+    float zoomAnchorMapCenterX;
+    float zoomAnchorMapCenterZ;
+    float zoomAnchorScale;
     private float scScale = 1.0F;
     private float guiToMap = 2.0F;
     private float mapToGui = 0.5F;
@@ -204,6 +209,9 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
     Waypoint selectedSeedMapperAssociatedWaypoint;
     private final Map<String, String> seedMapperHighlightWaypoints = new HashMap<>();
     private PopupGuiButton buttonWaypoints;
+    private PopupGuiButton buttonExploredChunks;
+    private PopupGuiButton buttonNewOldChunks;
+    private PopupGuiButton buttonWorldMapEntities;
     private PopupGuiButton buttonRealmView;
     private PopupGuiButton buttonSeedPreview;
     private final Minecraft minecraft = Minecraft.getInstance();
@@ -405,21 +413,28 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
         this.buildWorldName();
         this.leftMouseButtonDown = false;
         this.sideMargin = 10;
-        this.buttonCount = 6;
+        boolean showMultiworldButton = !this.options.hideMultiworldButton
+                && !minecraft.hasSingleplayerServer()
+                && !VoxelConstants.getVoxelMapInstance().getWaypointManager().receivedAutoSubworldName();
+        this.buttonCount = showMultiworldButton ? 9 : 8;
         this.buttonSeparation = 4;
         this.buttonWidth = (this.width - this.sideMargin * 2 - this.buttonSeparation * (this.buttonCount - 1)) / this.buttonCount;
-        this.buttonWaypoints = new PopupGuiButton(this.sideMargin, this.getHeight() - 26, this.buttonWidth, 20, Component.translatable("options.minimap.waypoints"), button -> minecraft.gui.setScreen(new GuiWaypoints(this)), this);
+        int buttonIndex = 0;
+        this.buttonWaypoints = new PopupGuiButton(this.sideMargin + buttonIndex++ * (this.buttonWidth + this.buttonSeparation), this.getHeight() - 26, this.buttonWidth, 20, Component.translatable("options.minimap.waypoints"), button -> minecraft.gui.setScreen(new GuiWaypoints(this)), this);
         this.addRenderableWidget(this.buttonWaypoints);
         this.multiworldButtonName = Component.translatable(VoxelConstants.isRealmServer() ? "menu.online" : "options.worldmap.multiworld");
         this.multiworldButtonNameRed = (Component.translatable(VoxelConstants.isRealmServer() ? "menu.online" : "options.worldmap.multiworld")).withStyle(ChatFormatting.RED);
-        if (!minecraft.hasSingleplayerServer() && !VoxelConstants.getVoxelMapInstance().getWaypointManager().receivedAutoSubworldName()) {
-            this.addRenderableWidget(this.buttonMultiworld = new PopupGuiButton(this.sideMargin + (this.buttonWidth + this.buttonSeparation), this.getHeight() - 26, this.buttonWidth, 20, this.multiworldButtonName, button -> minecraft.gui.setScreen(new GuiSubworldsSelect(this)), this));
+        if (showMultiworldButton) {
+            this.addRenderableWidget(this.buttonMultiworld = new PopupGuiButton(this.sideMargin + buttonIndex++ * (this.buttonWidth + this.buttonSeparation), this.getHeight() - 26, this.buttonWidth, 20, this.multiworldButtonName, button -> minecraft.gui.setScreen(new GuiSubworldsSelect(this)), this));
         }
 
-        this.buttonRealmView = this.addRenderableWidget(new PopupGuiButton(this.sideMargin + 2 * (this.buttonWidth + this.buttonSeparation), this.getHeight() - 26, this.buttonWidth, 20, Component.translatable("worldmap.realm.button", getDisplayedWorldMapDimensionName()), button -> cycleWorldMapDimensionView(), this));
-        this.buttonSeedPreview = this.addRenderableWidget(new PopupGuiButton(this.sideMargin + 3 * (this.buttonWidth + this.buttonSeparation), this.getHeight() - 26, this.buttonWidth, 20, Component.translatable("worldmap.seedpreview.button", I18n.get(this.seedMapperOptions.worldMapSeedPreview ? "options.on" : "options.off")), button -> toggleSeedPreview(), this));
-        this.addRenderableWidget(new PopupGuiButton(this.sideMargin + 4 * (this.buttonWidth + this.buttonSeparation), this.getHeight() - 26, this.buttonWidth, 20, Component.translatable("menu.options"), button -> minecraft.gui.setScreen(new GuiMinimapOptions(this)), this));
-        this.addRenderableWidget(new PopupGuiButton(this.sideMargin + 5 * (this.buttonWidth + this.buttonSeparation), this.getHeight() - 26, this.buttonWidth, 20, Component.translatable("gui.done"), button -> this.onClose(), this));
+        this.buttonRealmView = this.addRenderableWidget(new PopupGuiButton(this.sideMargin + buttonIndex++ * (this.buttonWidth + this.buttonSeparation), this.getHeight() - 26, this.buttonWidth, 20, Component.translatable("worldmap.realm.button", getDisplayedWorldMapDimensionName()), button -> cycleWorldMapDimensionView(), this));
+        this.buttonSeedPreview = this.addRenderableWidget(new PopupGuiButton(this.sideMargin + buttonIndex++ * (this.buttonWidth + this.buttonSeparation), this.getHeight() - 26, this.buttonWidth, 20, Component.translatable("worldmap.seedpreview.button", I18n.get(this.seedMapperOptions.worldMapSeedPreview ? "options.on" : "options.off")), button -> toggleSeedPreview(), this));
+        this.buttonExploredChunks = this.addRenderableWidget(new PopupGuiButton(this.sideMargin + buttonIndex++ * (this.buttonWidth + this.buttonSeparation), this.getHeight() - 26, this.buttonWidth, 20, Component.empty(), button -> toggleExploredChunks(), this));
+        this.buttonNewOldChunks = this.addRenderableWidget(new PopupGuiButton(this.sideMargin + buttonIndex++ * (this.buttonWidth + this.buttonSeparation), this.getHeight() - 26, this.buttonWidth, 20, Component.empty(), button -> toggleNewOldChunks(), this));
+        this.buttonWorldMapEntities = this.addRenderableWidget(new PopupGuiButton(this.sideMargin + buttonIndex++ * (this.buttonWidth + this.buttonSeparation), this.getHeight() - 26, this.buttonWidth, 20, Component.empty(), button -> toggleWorldMapEntities(), this));
+        this.addRenderableWidget(new PopupGuiButton(this.sideMargin + buttonIndex++ * (this.buttonWidth + this.buttonSeparation), this.getHeight() - 26, this.buttonWidth, 20, Component.translatable("menu.options"), button -> minecraft.gui.setScreen(new GuiMinimapOptions(this)), this));
+        this.addRenderableWidget(new PopupGuiButton(this.sideMargin + buttonIndex * (this.buttonWidth + this.buttonSeparation), this.getHeight() - 26, this.buttonWidth, 20, Component.translatable("gui.done"), button -> this.onClose(), this));
         refreshWorldMapControlLabels();
         this.coordinateXInput = new EditBox(this.getFont(), this.sideMargin, 10, 68, 20, Component.literal("X"));
         this.coordinateZInput = new EditBox(this.getFont(), this.sideMargin + 74, 10, 68, 20, Component.literal("Z"));
@@ -492,6 +507,15 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
                             ? (this.seedMapperOptions.worldMapSeedPreview ? "options.on" : "options.off")
                             : "worldmap.seedpreview.unavailable")));
         }
+        if (this.buttonExploredChunks != null) {
+            this.buttonExploredChunks.setMessage(Component.translatable("worldmap.explored.button", I18n.get(this.options.showExploredChunks ? "options.on" : "options.off")));
+        }
+        if (this.buttonNewOldChunks != null) {
+            this.buttonNewOldChunks.setMessage(Component.translatable("worldmap.newold.button", I18n.get(this.options.showNewOldChunks ? "options.on" : "options.off")));
+        }
+        if (this.buttonWorldMapEntities != null) {
+            this.buttonWorldMapEntities.setMessage(Component.translatable("worldmap.entities.button", I18n.get(this.options.showWorldMapEntities ? "options.on" : "options.off")));
+        }
     }
 
     private String getWorldMapSeedFallbackText() {
@@ -559,6 +583,24 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
             return;
         }
         this.seedMapperOptions.worldMapSeedPreview = !this.seedMapperOptions.worldMapSeedPreview;
+        refreshWorldMapControlLabels();
+        MapSettingsManager.instance.saveAll();
+    }
+
+    private void toggleExploredChunks() {
+        this.options.showExploredChunks = !this.options.showExploredChunks;
+        refreshWorldMapControlLabels();
+        MapSettingsManager.instance.saveAll();
+    }
+
+    private void toggleNewOldChunks() {
+        this.options.showNewOldChunks = !this.options.showNewOldChunks;
+        refreshWorldMapControlLabels();
+        MapSettingsManager.instance.saveAll();
+    }
+
+    private void toggleWorldMapEntities() {
+        this.options.showWorldMapEntities = !this.options.showWorldMapEntities;
         refreshWorldMapControlLabels();
         MapSettingsManager.instance.saveAll();
     }
@@ -636,6 +678,19 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
         return Math.min(this.options.maxZoom, zoom);
     }
 
+    private float scaledWorldMapZoom(float zoom) {
+        if (minecraft.getWindow().getScreenWidth() > 1600) {
+            return zoom * minecraft.getWindow().getScreenWidth() / 1600.0F;
+        }
+        return zoom;
+    }
+
+    private void captureZoomAnchor() {
+        this.zoomAnchorMapCenterX = this.mapCenterX;
+        this.zoomAnchorMapCenterZ = this.mapCenterZ;
+        this.zoomAnchorScale = Math.max(0.0001F, this.scaledWorldMapZoom(this.zoomStart));
+    }
+
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double amount) {
         this.timeOfLastMouseInput = System.currentTimeMillis();
@@ -654,6 +709,7 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
             this.timeOfZoom = System.currentTimeMillis();
             this.zoomDirectX = mouseDirectX;
             this.zoomDirectY = mouseDirectY;
+            this.captureZoomAnchor();
         }
 
         return true;
@@ -879,6 +935,7 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
             this.timeOfZoom = System.currentTimeMillis();
             this.zoomDirectX = (minecraft.getWindow().getWidth() / 2f);
             this.zoomDirectY = (minecraft.getWindow().getHeight() - minecraft.getWindow().getHeight() / 2f);
+            this.captureZoomAnchor();
             this.switchToKeyboardInput();
         }
 
@@ -1031,7 +1088,6 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
         float mouseDirectX = (float) minecraft.mouseHandler.xpos();
         float mouseDirectY = (float) minecraft.mouseHandler.ypos();
         if (this.zoom != this.zoomGoal) {
-            float previousZoom = this.zoom;
             long timeSinceZoom = System.currentTimeMillis() - this.timeOfZoom;
             if (timeSinceZoom < 700.0F) {
                 this.zoom = EasingUtils.easeOutExpo(this.zoomStart, this.zoomGoal, timeSinceZoom, 700.0F);
@@ -1039,25 +1095,17 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
                 this.zoom = this.zoomGoal;
             }
 
-            float scaledZoom = this.zoom;
-            if (minecraft.getWindow().getWidth() > 1600) {
-                scaledZoom = this.zoom * minecraft.getWindow().getWidth() / 1600.0F;
-            }
-
-            float zoomDelta = this.zoom / previousZoom;
-            float zoomOffsetX = this.centerX * this.guiToDirectMouse - this.zoomDirectX;
-            float zoomOffsetY = (this.top + this.centerY) * this.guiToDirectMouse - this.zoomDirectY;
-            float zoomDeltaX = zoomOffsetX - zoomOffsetX * zoomDelta;
-            float zoomDeltaY = zoomOffsetY - zoomOffsetY * zoomDelta;
-            this.mapCenterX += zoomDeltaX / scaledZoom;
-            this.mapCenterZ += zoomDeltaY / scaledZoom;
+            float scaledZoom = this.scaledWorldMapZoom(this.zoom);
+            float directOffsetX = this.zoomDirectX - this.centerX * this.scScale;
+            float directOffsetY = this.zoomDirectY - (this.top + this.centerY) * this.scScale;
+            this.mapCenterX = this.zoomAnchorMapCenterX
+                    + directOffsetX * (1.0F / this.zoomAnchorScale - 1.0F / scaledZoom);
+            this.mapCenterZ = this.zoomAnchorMapCenterZ
+                    + directOffsetY * (1.0F / this.zoomAnchorScale - 1.0F / scaledZoom);
         }
 
         this.options.zoom = this.zoomGoal;
-        float scaledZoom = this.zoom;
-        if (minecraft.getWindow().getScreenWidth() > 1600) {
-            scaledZoom = this.zoom * minecraft.getWindow().getScreenWidth() / 1600.0F;
-        }
+        float scaledZoom = this.scaledWorldMapZoom(this.zoom);
 
         this.guiToMap = this.scScale / scaledZoom;
         this.mapToGui = 1.0F / this.scScale * scaledZoom;
@@ -1360,6 +1408,7 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
         }
         if (!farZoomPerformanceMode) {
             drawSeedMapperMarkers(graphics, mouseX, mouseY);
+            drawContainerMarkers(graphics, mouseX, mouseY);
         }
         drawPlayerLayerStatuses(graphics);
 
@@ -1481,7 +1530,7 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
         this.exploredQuadCount = 0;
         // Clear up front so an early return (overlay off / zero alpha) leaves no stale player-layer labels.
         this.playerLayerStatusHitboxes.clear();
-        if (!radarOptions.showExploredChunks) {
+        if (!options.showExploredChunks) {
             return;
         }
 
@@ -3055,6 +3104,9 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
         }
 
         int markerLimit = Math.max(200, seedMapperOptions.worldMapMarkerLimit);
+        if (seedMapperOptions.worldMapEntityLimit > 0) {
+            markerLimit = Math.min(markerLimit, seedMapperOptions.worldMapEntityLimit);
+        }
         if (mapInMotion) {
             if (ultraLowDetail) {
                 markerLimit = Math.min(markerLimit, 180);
@@ -3148,6 +3200,93 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
             return;
         }
         drawStatusText(graphics, "Loading SeedMapper: " + (seedMapperLoadingSummary == null || seedMapperLoadingSummary.isBlank() ? "structures" : seedMapperLoadingSummary), this.sideMargin + 2, this.bottom - 14, 0xFFE0E0E0, 0xFF000000);
+    }
+
+    private void drawContainerMarkers(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        if (!options.showWorldMapEntities) {
+            return;
+        }
+        if (!seedMapperOptions.containerDetection && !seedMapperOptions.workstationDetection
+                && !seedMapperOptions.redstoneDetection && !seedMapperOptions.spawnerDetection) {
+            return;
+        }
+        // Match SeedMapper markers: keep a readable screen-space icon while
+        // the map zooms, and begin grouping before individual entity icons
+        // overlap each other.
+        double clusterCell = seedMapperOptions.markerClustering && mapToGui < 1.5F
+                ? 16.0D / Math.max(0.025F, mapToGui) : 1.0D;
+        ArrayList<SeedMapperContainerDetection.ContainerCluster> clusters = new ArrayList<>(
+                SeedMapperContainerDetection.clusterMarkers(clusterCell));
+        // Bound the per-frame icon work at close zoom, where detections are no
+        // longer spatially grouped. Select by distance first so an icon does
+        // not disappear merely because a distant cluster has a larger count.
+        int containerIconLimit = seedMapperOptions.worldMapEntityLimit > 0
+                ? seedMapperOptions.worldMapEntityLimit
+                : Integer.MAX_VALUE;
+        if (clusters.size() > containerIconLimit) {
+            final double containerCenterX = this.mapCenterX;
+            final double containerCenterZ = this.mapCenterZ;
+            clusters.sort(java.util.Comparator.comparingDouble(cluster -> {
+                SeedMapperContainerMarker marker = cluster.marker();
+                double ptX = marker.blockX() + 0.5D;
+                double ptZ = marker.blockZ() + 0.5D;
+                double wayX = containerCenterX - (this.oldNorth ? -ptZ : ptX);
+                double wayZ = containerCenterZ - (this.oldNorth ? ptX : ptZ);
+                return wayX * wayX + wayZ * wayZ;
+            }));
+            clusters = new ArrayList<>(clusters.subList(0, containerIconLimit));
+        }
+        // Draw lower-count clusters first so the highest count remains on top.
+        clusters.sort(java.util.Comparator.comparingInt(SeedMapperContainerDetection.ContainerCluster::count));
+        for (SeedMapperContainerDetection.ContainerCluster cluster : clusters) {
+            SeedMapperContainerMarker marker = cluster.marker();
+            float ptX = marker.blockX() + 0.5F;
+            float ptZ = marker.blockZ() + 0.5F;
+            double wayX = this.mapCenterX - (this.oldNorth ? -ptZ : ptX);
+            double wayY = this.mapCenterZ - (this.oldNorth ? ptX : ptZ);
+            float locate = (float) Math.atan2(wayX, wayY);
+            float hypot = (float) Math.sqrt(wayX * wayX + wayY * wayY) * mapToGui;
+            double dispX = hypot * Math.sin(locate);
+            double dispY = hypot * Math.cos(locate);
+            if (Math.abs(dispX) > this.centerX + 10 || Math.abs(dispY) > this.centerY + 10) {
+                continue;
+            }
+            graphics.pose().pushMatrix();
+            graphics.pose().rotate(-locate);
+            graphics.pose().translate(0.0F, -hypot);
+            graphics.pose().rotate(locate);
+            float centerX = this.width / 2.0F;
+            float centerY = this.height / 2.0F;
+            Vector2f guiVector = graphics.pose().transformPosition(new Vector2f(centerX, centerY));
+            float iconSize = ICON_WIDTH * (float) seedMapperOptions.mapEntityScale;
+            VoxelMapGuiGraphics.blitFloat(graphics, RenderPipelines.GUI_TEXTURED, marker.texture(),
+                    centerX - iconSize / 2.0F, centerY - iconSize / 2.0F, iconSize, iconSize,
+                    0.0F, 1.0F, 0.0F, 1.0F, 0xFFFFFFFF);
+            if (cluster.count() > 1) {
+                String countText = Integer.toString(cluster.count());
+                float badgeWidth = Math.max(12.0F, getFont().width(countText) + 8.0F);
+                float badgeHeight = getFont().lineHeight + 4.0F;
+                graphics.pose().pushMatrix();
+                graphics.pose().translate(centerX + iconSize * 0.42F, centerY - iconSize * 0.42F);
+                graphics.pose().scale(Math.max(0.45F, iconSize / 16.0F), Math.max(0.45F, iconSize / 16.0F));
+                int left = Math.round(-badgeWidth / 2.0F);
+                int top = Math.round(-badgeHeight / 2.0F);
+                int right = Math.round(badgeWidth / 2.0F);
+                int bottom = Math.round(badgeHeight / 2.0F);
+                graphics.fill(left, top, right, bottom, 0xE6000000);
+                graphics.fill(left, top, right, top + 1, 0xFFFFFFFF);
+                graphics.fill(left, bottom - 1, right, bottom, 0xFFFFFFFF);
+                graphics.fill(left, top, left + 1, bottom, 0xFFFFFFFF);
+                graphics.fill(right - 1, top, right, bottom, 0xFFFFFFFF);
+                graphics.centeredText(getFont(), Component.literal(countText), 0, top + 2, 0xFFFFFFFF);
+                graphics.pose().popMatrix();
+            }
+            if (mouseX >= guiVector.x() - iconSize / 2.0F && mouseX <= guiVector.x() + iconSize / 2.0F
+                    && mouseY >= guiVector.y() - iconSize / 2.0F && mouseY <= guiVector.y() + iconSize / 2.0F && popupOpen()) {
+                renderTooltip(graphics, Component.literal(marker.label() + " (X: " + marker.blockX() + ", Z: " + marker.blockZ() + ")"), mouseX, mouseY);
+            }
+            graphics.pose().popMatrix();
+        }
     }
 
     private void drawSeedPreviewLoadingStatus(GuiGraphicsExtractor graphics) {
@@ -3491,12 +3630,20 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
         boolean portalMarker = marker.feature() == SeedMapperFeature.NETHER_PORTAL
                 || marker.feature() == SeedMapperFeature.END_PORTAL
                 || marker.feature() == SeedMapperFeature.END_BEACON;
-        int iconWidth = datapackStructure
-                ? SeedMapperImportedDatapackManager.iconSizeForPersistentMap()
-                : (portalMarker ? ICON_WIDTH + 4 : ICON_WIDTH);
-        int iconHeight = datapackStructure
-                ? SeedMapperImportedDatapackManager.iconSizeForPersistentMap()
-                : (portalMarker ? ICON_HEIGHT + 4 : ICON_HEIGHT);
+        int iconWidth;
+        int iconHeight;
+        if (portalMarker) {
+            // Live portals use the same screen-space entity icon sizing as
+            // containers, redstone, workstations, and spawners.
+            int entitySize = Math.max(2, Math.round(ICON_WIDTH * (float) seedMapperOptions.mapEntityScale));
+            iconWidth = entitySize;
+            iconHeight = entitySize;
+        } else {
+            int baseSize = datapackStructure ? SeedMapperImportedDatapackManager.iconSizeForPersistentMap() : ICON_WIDTH;
+            int scaledSize = Math.max(2, (int) Math.round(baseSize * seedMapperOptions.seedMapperWorldMapIconScale));
+            iconWidth = scaledSize;
+            iconHeight = scaledSize;
+        }
         int x = this.width / 2;
         int y = this.height / 2;
         int borderX = this.centerX + iconWidth / 2;
@@ -3564,6 +3711,10 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
                 : 0xFFFFFFFF;
         if (datapackStructure) {
             drawDatapackMarker(graphics, x, y, iconWidth, iconHeight, iconColor);
+        } else if (portalMarker) {
+            VoxelMapGuiGraphics.blitFloat(graphics, RenderPipelines.GUI_TEXTURED, marker.feature().icon(),
+                    x - iconWidth / 2.0F, y - iconHeight / 2.0F, iconWidth, iconHeight,
+                    0.0F, 1.0F, 0.0F, 1.0F, iconColor);
         } else {
             Identifier icon = marker.feature().icon();
             VoxelMapGuiGraphics.blitFloat(graphics, RenderPipelines.GUI_TEXTURED, icon, x - iconWidth / 2.0F, y - iconHeight / 2.0F, iconWidth, iconHeight, 0, 1, 0, 1, iconColor);
@@ -3574,7 +3725,18 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
         if (completed) {
             drawCompletedTick(graphics, Math.round(x - iconWidth / 2.0F), Math.round(y - iconHeight / 2.0F), iconWidth, iconHeight);
         }
+        if (marker.feature() == SeedMapperFeature.ELYTRA
+                && seedMapperOptions.elytraDetection
+                && seedMapperOptions.isElytraMissing(worldKey, marker.blockX(), marker.blockZ())) {
+            drawMissingElytraSlash(graphics, Math.round(x - iconWidth / 2.0F), Math.round(y - iconHeight / 2.0F), iconWidth, iconHeight);
+        }
         graphics.pose().popMatrix();
+    }
+
+    private void drawMissingElytraSlash(GuiGraphicsExtractor graphics, int x, int y, int width, int height) {
+        int inset = Math.max(1, Math.min(width, height) / 6);
+        drawLine(graphics, x + inset, y + height - inset, x + width - inset, y + inset, 4, 0xFF5A0000);
+        drawLine(graphics, x + inset, y + height - inset, x + width - inset, y + inset, 2, 0xFFFF2020);
     }
 
     private void drawDatapackMarker(GuiGraphicsExtractor graphics, int x, int y, int iconWidth, int iconHeight, int color) {
