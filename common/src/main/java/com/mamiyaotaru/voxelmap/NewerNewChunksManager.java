@@ -13,6 +13,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import com.mamiyaotaru.voxelmap.util.DimensionManager;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Block;
@@ -1377,12 +1378,12 @@ public class NewerNewChunksManager {
 
     private boolean isNether() {
         Level level = GameVariableAccessShim.getWorld();
-        return level != null && "minecraft:the_nether".equals(level.dimension().identifier().toString());
+        return DimensionManager.getEnvironment(level) == DimensionManager.Environment.NETHER;
     }
 
     private boolean isEnd() {
         Level level = GameVariableAccessShim.getWorld();
-        return level != null && "minecraft:the_end".equals(level.dimension().identifier().toString());
+        return DimensionManager.getEnvironment(level) == DimensionManager.Environment.END;
     }
 
     // -------------------------------------------------------------------------

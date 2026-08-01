@@ -33,6 +33,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemLore;
 import net.minecraft.world.level.Level;
+import com.mamiyaotaru.voxelmap.util.DimensionManager;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -182,10 +183,10 @@ public final class GuiSeedMapperLootViewer extends Screen {
     }
 
     private static int currentDimensionForCubiomes(Level level) {
-        if (level.dimension() == Level.NETHER) {
+        if (DimensionManager.getEnvironment(level) == DimensionManager.Environment.NETHER) {
             return Cubiomes.DIM_NETHER();
         }
-        if (level.dimension() == Level.END) {
+        if (DimensionManager.getEnvironment(level) == DimensionManager.Environment.END) {
             return Cubiomes.DIM_END();
         }
         return Cubiomes.DIM_OVERWORLD();

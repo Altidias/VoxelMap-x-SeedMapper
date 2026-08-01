@@ -7,6 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import com.mamiyaotaru.voxelmap.util.DimensionManager;
 import net.minecraft.world.phys.AABB;
 
 /** Updates Elytra ship markers from item frames in ships the player has actually loaded. */
@@ -85,7 +86,7 @@ public final class SeedMapperElytraDetection {
 
     private static int getDimension() {
         Minecraft minecraft = VoxelConstants.getMinecraft();
-        return minecraft.level != null && minecraft.level.dimension() == Level.END
+        return minecraft.level != null && DimensionManager.getEnvironment(minecraft.level) == DimensionManager.Environment.END
                 ? Cubiomes.DIM_END() : Integer.MIN_VALUE;
     }
 

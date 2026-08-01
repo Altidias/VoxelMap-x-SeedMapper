@@ -81,6 +81,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.entity.player.PlayerModelPart;
 import net.minecraft.world.level.Level;
+import com.mamiyaotaru.voxelmap.util.DimensionManager;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.border.WorldBorder;
@@ -4001,10 +4002,10 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
                 if (currentLevel == null) {
                     yield Integer.MIN_VALUE;
                 }
-                if (currentLevel.dimension() == Level.NETHER) {
+                if (DimensionManager.getEnvironment(currentLevel) == DimensionManager.Environment.NETHER) {
                     yield Cubiomes.DIM_NETHER();
                 }
-                if (currentLevel.dimension() == Level.END) {
+                if (DimensionManager.getEnvironment(currentLevel) == DimensionManager.Environment.END) {
                     yield Cubiomes.DIM_END();
                 }
                 yield Cubiomes.DIM_OVERWORLD();

@@ -8,6 +8,7 @@ import net.minecraft.client.resources.language.I18n;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
+import com.mamiyaotaru.voxelmap.util.DimensionManager;
 
 import java.util.Locale;
 
@@ -170,14 +171,12 @@ public class PersistentMapSettingsManager implements ISubSettingsManager {
             if (currentLevel == null) {
                 return OVERWORLD;
             }
-            Identifier currentIdentifier = currentLevel.dimension().identifier();
-            if (Level.NETHER.identifier().equals(currentIdentifier)) {
-                return NETHER;
-            }
-            if (Level.END.identifier().equals(currentIdentifier)) {
-                return END;
-            }
-            return OVERWORLD;
+            return switch (DimensionManager.getEnvironment(currentLevel)) {
+                case NETHER -> NETHER;
+                case END -> END;
+                case OVERWORLD -> OVERWORLD;
+                case CUSTOM_OR_UNKNOWN -> CURRENT;
+            };
         }
 
         private static WorldMapDimensionView[] orderedAlternates(WorldMapDimensionView currentRealm) {

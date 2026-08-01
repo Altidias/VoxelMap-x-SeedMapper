@@ -32,6 +32,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.Level;
+import com.mamiyaotaru.voxelmap.util.DimensionManager;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.Blocks;
@@ -2009,9 +2010,10 @@ public final class SeedMapperCommandHandler {
         }
         Level level = GameVariableAccessShim.getWorld();
         if (level == null) return Integer.MIN_VALUE;
-        if (level.dimension() == Level.NETHER) return Cubiomes.DIM_NETHER();
-        if (level.dimension() == Level.END) return Cubiomes.DIM_END();
-        return Cubiomes.DIM_OVERWORLD();
+        DimensionManager.Environment environment = DimensionManager.getEnvironment(level);
+        if (environment == DimensionManager.Environment.NETHER) return Cubiomes.DIM_NETHER();
+        if (environment == DimensionManager.Environment.END) return Cubiomes.DIM_END();
+        return environment == DimensionManager.Environment.OVERWORLD ? Cubiomes.DIM_OVERWORLD() : Integer.MIN_VALUE;
     }
 
     private static int commandX() {

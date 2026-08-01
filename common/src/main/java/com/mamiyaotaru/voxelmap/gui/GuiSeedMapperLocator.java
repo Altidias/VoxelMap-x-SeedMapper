@@ -21,6 +21,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.Level;
+import com.mamiyaotaru.voxelmap.util.DimensionManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -534,9 +535,10 @@ public class GuiSeedMapperLocator extends GuiScreenMinimap {
     private int getCurrentCubiomesDimension() {
         var level = GameVariableAccessShim.getWorld();
         if (level == null) return Integer.MIN_VALUE;
-        if (level.dimension() == net.minecraft.world.level.Level.NETHER) return Cubiomes.DIM_NETHER();
-        if (level.dimension() == net.minecraft.world.level.Level.END) return Cubiomes.DIM_END();
-        return Cubiomes.DIM_OVERWORLD();
+        DimensionManager.Environment environment = DimensionManager.getEnvironment(level);
+        if (environment == DimensionManager.Environment.NETHER) return Cubiomes.DIM_NETHER();
+        if (environment == DimensionManager.Environment.END) return Cubiomes.DIM_END();
+        return environment == DimensionManager.Environment.OVERWORLD ? Cubiomes.DIM_OVERWORLD() : Integer.MIN_VALUE;
     }
 
     private int parseLootAmount() {

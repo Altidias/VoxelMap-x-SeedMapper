@@ -30,6 +30,7 @@ import com.mamiyaotaru.voxelmap.util.CPULightmap;
 import com.mamiyaotaru.voxelmap.util.ColorUtils;
 import com.mamiyaotaru.voxelmap.util.Contact;
 import com.mamiyaotaru.voxelmap.util.DimensionContainer;
+import com.mamiyaotaru.voxelmap.util.DimensionManager;
 import com.mamiyaotaru.voxelmap.textures.DynamicMutableTexture;
 import com.mamiyaotaru.voxelmap.util.FullMapData;
 import com.mamiyaotaru.voxelmap.util.GameVariableAccessShim;
@@ -2344,13 +2345,15 @@ public class Map implements Runnable, IChangeObserver, IReloadListener {
         if (currentLevel == null) {
             return Integer.MIN_VALUE;
         }
-        if (currentLevel.dimension() == Level.NETHER) {
+        DimensionManager.Environment environment = DimensionManager.getEnvironment(currentLevel);
+        if (environment == DimensionManager.Environment.NETHER) {
             return com.github.cubiomes.Cubiomes.DIM_NETHER();
         }
-        if (currentLevel.dimension() == Level.END) {
+        if (environment == DimensionManager.Environment.END) {
             return com.github.cubiomes.Cubiomes.DIM_END();
         }
-        return com.github.cubiomes.Cubiomes.DIM_OVERWORLD();
+        return environment == DimensionManager.Environment.OVERWORLD
+                ? com.github.cubiomes.Cubiomes.DIM_OVERWORLD() : Integer.MIN_VALUE;
     }
 
     private record SeedMapperMinimapQueryKey(long seed, int dimension, int mcVersion, int generatorFlags, int centerX, int centerZ, int radius, boolean lootOnly, int datapackHash, String datapackWorldKey) {

@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientLevel;
+import com.mamiyaotaru.voxelmap.util.DimensionManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -214,6 +215,7 @@ public class VoxelMap implements PreparableReloadListener {
 
         ClientLevel newWorld = GameVariableAccessShim.getWorld();
         if (world != newWorld) {
+            String previousWorldId = world == null ? "unknown" : world.dimension().identifier().toString();
             if (world != null) {
                 com.mamiyaotaru.voxelmap.seedmapper.SeedMapperContainerDetection.flushPersistence();
             }
@@ -221,6 +223,14 @@ public class VoxelMap implements PreparableReloadListener {
             waypointManager.newWorld(world);
             persistentMap.newWorld(world);
             map.newWorld(world);
+            String currentWorldId = world == null ? "unknown" : world.dimension().identifier().toString();
+            String typeKey = world == null ? "unknown" : world.dimensionTypeRegistration().unwrapKey().map(key -> key.identifier().toString()).orElse("unknown");
+            DimensionManager.Environment environment = DimensionManager.getEnvironment(world);
+            String mapStorageIdentifier = world == null ? "unknown" : getDimensionManager().getDimensionContainerByWorld(world).getStorageName();
+            VoxelConstants.getLogger().info("VoxelMap dimension transition: Previous world ID: " + previousWorldId
+                    + ", Current world ID: " + currentWorldId + ", Registered dimension type key: " + typeKey
+                    + ", Dimension effects ID: unavailable, Classified environment: " + environment
+                    + ", Map storage identifier: " + mapStorageIdentifier);
             if (world != null) {
                 MapUtils.reset();
 

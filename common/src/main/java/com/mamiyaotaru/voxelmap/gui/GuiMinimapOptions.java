@@ -24,6 +24,7 @@ public class GuiMinimapOptions extends GuiScreenMinimap {
     private static final int HEADER_HEIGHT = 32;
     private static final int FOOTER_HEIGHT = 32;
     private static final int CATEGORY_GAP = 4;
+    private static String lastCategory = "minimap";
 
     private final List<SettingsCategory> categories = VoxelMapSettings.create(this::openEntityTypeDialog, () -> this);
     private final List<Button> categoryButtons = new ArrayList<>();
@@ -37,7 +38,7 @@ public class GuiMinimapOptions extends GuiScreenMinimap {
     private EntityTypeDialog entityTypeDialog;
 
     public GuiMinimapOptions(Screen parent) {
-        this(parent, "minimap");
+        this(parent, lastCategory);
     }
 
     public GuiMinimapOptions(Screen parent, int legacyTabIndex) {
@@ -62,6 +63,7 @@ public class GuiMinimapOptions extends GuiScreenMinimap {
                 break;
             }
         }
+        lastCategory = categories.get(selectedCategory).id();
     }
 
     @Override
@@ -107,6 +109,7 @@ public class GuiMinimapOptions extends GuiScreenMinimap {
         if (index == selectedCategory)
             return;
         selectedCategory = index;
+        lastCategory = categories.get(index).id();
         rebuildContent();
     }
 
