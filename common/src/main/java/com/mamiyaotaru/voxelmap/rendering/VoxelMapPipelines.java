@@ -46,6 +46,16 @@ public class VoxelMapPipelines {
             .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, true))
             .build();
 
+    public static final RenderPipeline BLOCK_GHOST_NO_DEPTH = RenderPipeline.builder(RenderPipelines.ENTITY_SNIPPET)
+            .withLocation(Identifier.fromNamespaceAndPath(VoxelConstants.MOD_ID, "pipeline/chunk_analysis_block_ghost"))
+            .withShaderDefine("ALPHA_CUTOUT", 0.1F)
+            .withShaderDefine("PER_FACE_LIGHTING")
+            .withBindGroupLayout(BindGroupLayouts.SAMPLER1)
+            .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
+            .withCull(false)
+            .build();
+
     public static final RenderPipeline ENTITY_ICON = RenderPipeline.builder(RenderPipelines.ENTITY_SNIPPET)
             .withLocation(Identifier.fromNamespaceAndPath(VoxelConstants.MOD_ID, "pipeline/entity_icon"))
             .withShaderDefine("ALPHA_CUTOUT", 0.1F)

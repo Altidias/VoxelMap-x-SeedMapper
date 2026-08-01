@@ -6,6 +6,7 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.LayeringTransform;
 import net.minecraft.client.renderer.rendertype.OutputTarget;
 import net.minecraft.resources.Identifier;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.util.Util;
 
 public class VoxelMapRenderTypes {
@@ -69,6 +70,18 @@ public class VoxelMapRenderTypes {
     public static final RenderType SEEDMAPPER_ESP_QUADS_NO_DEPTH = RenderType.create(
             "voxelmap_seedmapper_esp_quads_no_depth",
             RenderSetup.builder(VoxelMapPipelines.QUADS_NO_DEPTH)
+                    .setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
+                    .setOutputTarget(OutputTarget.MAIN_TARGET)
+                    .createRenderSetup()
+    );
+
+    public static final RenderType CHUNK_ANALYSIS_BLOCK_GHOST = RenderType.create(
+            "voxelmap_chunk_analysis_block_ghost",
+            RenderSetup.builder(VoxelMapPipelines.BLOCK_GHOST_NO_DEPTH)
+                    .withTexture("Sampler0", TextureAtlas.LOCATION_BLOCKS)
+                    .useLightmap()
+                    .useOverlay()
+                    .sortOnUpload()
                     .setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
                     .setOutputTarget(OutputTarget.MAIN_TARGET)
                     .createRenderSetup()

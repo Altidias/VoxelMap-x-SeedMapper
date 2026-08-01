@@ -8,6 +8,7 @@ import com.mamiyaotaru.voxelmap.gui.GuiWaypoints;
 import com.mamiyaotaru.voxelmap.gui.GuiWelcomeScreen;
 import com.mamiyaotaru.voxelmap.gui.overridden.EnumOptionsMinimap;
 import com.mamiyaotaru.voxelmap.chunksync.ChunkSharePlayerSettings;
+import com.mamiyaotaru.voxelmap.chunkanalysis.ChunkAnalysisService;
 import com.mamiyaotaru.voxelmap.interfaces.AbstractMapData;
 import com.mamiyaotaru.voxelmap.interfaces.IChangeObserver;
 import com.mamiyaotaru.voxelmap.interfaces.IReloadListener;
@@ -523,6 +524,16 @@ public class Map implements Runnable, IChangeObserver, IReloadListener {
 
         if (minecraft.gui.screen() == null && this.options.keyBindOptionsMenu.consumeClick()) {
             minecraft.gui.setScreen(new GuiMinimapOptions(null));
+        }
+
+        if (minecraft.gui.screen() == null && this.options.keyBindChunkAnalysisScan.consumeClick()) {
+            ChunkAnalysisService service = ChunkAnalysisService.get();
+            service.scan(VoxelConstants.getVoxelMapInstance().getChunkAnalysisOptions().scanRadius);
+        }
+
+        if (minecraft.gui.screen() == null && this.options.keyBindChunkAnalysisVoids.consumeClick()) {
+            ChunkAnalysisService service = ChunkAnalysisService.get();
+            service.scanVoids(VoxelConstants.getVoxelMapInstance().getChunkAnalysisOptions().scanRadius);
         }
 
         this.checkForChanges();

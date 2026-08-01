@@ -1,6 +1,7 @@
 package com.mamiyaotaru.voxelmap;
 
 import com.mamiyaotaru.voxelmap.interfaces.AbstractRadar;
+import com.mamiyaotaru.voxelmap.chunkanalysis.ChunkAnalysisSettingsManager;
 import com.mamiyaotaru.voxelmap.interfaces.IReloadListener;
 import com.mamiyaotaru.voxelmap.multiloader.Events;
 import com.mamiyaotaru.voxelmap.multiloader.MultiLoaderManager;
@@ -47,6 +48,7 @@ public class VoxelMap implements PreparableReloadListener {
     private RadarSettingsManager radarOptions;
     private PersistentMapSettingsManager persistentMapOptions;
     private SeedMapperSettingsManager seedMapperOptions;
+    private ChunkAnalysisSettingsManager chunkAnalysisOptions;
 
     private Map map;
     private PersistentMap persistentMap;
@@ -80,6 +82,7 @@ public class VoxelMap implements PreparableReloadListener {
         radarOptions = new RadarSettingsManager();
         persistentMapOptions = new PersistentMapSettingsManager();
         seedMapperOptions = new SeedMapperSettingsManager();
+        chunkAnalysisOptions = new ChunkAnalysisSettingsManager();
 
         mapOptions.showUnderMenus = showUnderMenus;
         radarOptions.forceCpuRendering = VoxelConstants.hasVulkanMod();
@@ -90,6 +93,7 @@ public class VoxelMap implements PreparableReloadListener {
         mapOptions.addSubSettingsManager(radarOptions);
         mapOptions.addSubSettingsManager(persistentMapOptions);
         mapOptions.addSubSettingsManager(seedMapperOptions);
+        mapOptions.addSubSettingsManager(chunkAnalysisOptions);
         mapOptions.loadAll();
 
         colorManager = new ColorManager();
@@ -239,6 +243,7 @@ public class VoxelMap implements PreparableReloadListener {
         portalMarkersManager.onTick();
         com.mamiyaotaru.voxelmap.seedmapper.SeedMapperElytraDetection.tick();
         com.mamiyaotaru.voxelmap.seedmapper.SeedMapperContainerDetection.tick();
+        com.mamiyaotaru.voxelmap.chunkanalysis.ChunkAnalysisService.get().tick();
         persistentMap.onTick();
     }
 
@@ -308,6 +313,10 @@ public class VoxelMap implements PreparableReloadListener {
 
     public SeedMapperSettingsManager getSeedMapperOptions() {
         return seedMapperOptions;
+    }
+
+    public ChunkAnalysisSettingsManager getChunkAnalysisOptions() {
+        return chunkAnalysisOptions;
     }
 
     public Map getMap() {
@@ -436,6 +445,8 @@ public class VoxelMap implements PreparableReloadListener {
 
     public void onDisconnect() {
         com.mamiyaotaru.voxelmap.seedmapper.SeedMapperContainerDetection.flushPersistence();
+        com.mamiyaotaru.voxelmap.chunkanalysis.ChunkAnalysisService.get().cancel();
+        com.mamiyaotaru.voxelmap.chunkanalysis.ChunkAnalysisService.get().clear();
         clearServerSettings();
     }
 
@@ -447,6 +458,7 @@ public class VoxelMap implements PreparableReloadListener {
     }
 
     public void onClientStopping() {
+        com.mamiyaotaru.voxelmap.chunkanalysis.ChunkAnalysisService.get().shutdown();
         try {
             VoxelConstants.onShutDown();
         } catch (RuntimeException e) {

@@ -20,7 +20,7 @@ public final class SeedMapperCommandTree {
     private static final List<String> ORE_VEIN_TYPES = List.of("iron", "copper");
     private static final List<String> ESP_TYPES = List.of("terrain", "canyon", "cave");
     private static final List<String> SOURCE_WRAPPERS = List.of("run", "seeded", "positioned", "in", "versioned", "flagged", "as", "rotated");
-    private static final List<String> ROOT_COMMANDS = List.of("help", "seed", "version", "locate", "highlight", "mine", "export", "chunksync", "updatechecker");
+    private static final List<String> ROOT_COMMANDS = List.of("help", "seed", "version", "locate", "highlight", "mine", "export", "chunksync", "chunkanalysis", "updatechecker");
     private static final List<String> LOCATE_TYPES = List.of("structure", "feature", "biome", "orevein", "slime", "slimechunk", "slime_chunk", "loot");
     private static final List<String> LOOT_QUERY_TERMS = List.of(
             "sentry_armor_trim_smithing_template", "vex_armor_trim_smithing_template",
@@ -132,6 +132,22 @@ public final class SeedMapperCommandTree {
                         .then(LiteralArgumentBuilder.<S>literal("players")
                                 .executes(context -> runRaw(context, runner, "chunksync players")))
                         .then(LiteralArgumentBuilder.<S>literal("remove").executes(context -> runRaw(context, runner, "chunksync remove"))))
+                .then(LiteralArgumentBuilder.<S>literal("chunkanalysis")
+                        .executes(context -> runRaw(context, runner, "chunkanalysis scan"))
+                        .then(LiteralArgumentBuilder.<S>literal("scan")
+                                .executes(context -> runRaw(context, runner, "chunkanalysis scan"))
+                                .then(RequiredArgumentBuilder.<S, Integer>argument("radius", IntegerArgumentType.integer(0, 8))
+                                        .executes(context -> run(context, runner, "chunkanalysis scan " + IntegerArgumentType.getInteger(context, "radius")))))
+                        .then(LiteralArgumentBuilder.<S>literal("voids")
+                                .executes(context -> runRaw(context, runner, "chunkanalysis voids"))
+                                .then(RequiredArgumentBuilder.<S, Integer>argument("radius", IntegerArgumentType.integer(0, 8))
+                                        .executes(context -> run(context, runner, "chunkanalysis voids " + IntegerArgumentType.getInteger(context, "radius")))))
+                        .then(LiteralArgumentBuilder.<S>literal("clear").executes(context -> runRaw(context, runner, "chunkanalysis clear")))
+                        .then(LiteralArgumentBuilder.<S>literal("status").executes(context -> runRaw(context, runner, "chunkanalysis status")))
+                        .then(LiteralArgumentBuilder.<S>literal("ghost")
+                                .executes(context -> runRaw(context, runner, "chunkanalysis ghost"))
+                                .then(LiteralArgumentBuilder.<S>literal("on").executes(context -> runRaw(context, runner, "chunkanalysis ghost on")))
+                                .then(LiteralArgumentBuilder.<S>literal("off").executes(context -> runRaw(context, runner, "chunkanalysis ghost off")))))
                 .then(LiteralArgumentBuilder.<S>literal("updatechecker")
                         .then(LiteralArgumentBuilder.<S>literal("on").executes(context -> runRaw(context, runner, "updatechecker on")))
                         .then(LiteralArgumentBuilder.<S>literal("off").executes(context -> runRaw(context, runner, "updatechecker off")))

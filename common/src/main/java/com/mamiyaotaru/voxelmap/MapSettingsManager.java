@@ -138,6 +138,8 @@ public class MapSettingsManager implements ISettingsManager {
     public KeyMapping keyBindSeedMapperSettings;
     public KeyMapping keyBindSeedMapperOptionsPage;
     public KeyMapping keyBindOptionsMenu;
+    public KeyMapping keyBindChunkAnalysisScan;
+    public KeyMapping keyBindChunkAnalysisVoids;
     public final KeyMapping[] keyBindings;
 
     public MapSettingsManager() {
@@ -163,7 +165,9 @@ public class MapSettingsManager implements ISettingsManager {
                 keyBindSeedMapperLootViewer = new KeyMapping("key.seedmapper.openLootViewer", -1, category),
                 keyBindSeedMapperSettings = new KeyMapping("key.seedmapper.openSettings", -1, category),
                 keyBindSeedMapperOptionsPage = new KeyMapping("key.seedmapper.openOptionsPage", -1, category),
-                keyBindOptionsMenu = new KeyMapping("key.minimap.openOptionsMenu", -1, category)
+                keyBindOptionsMenu = new KeyMapping("key.minimap.openOptionsMenu", -1, category),
+                keyBindChunkAnalysisScan = new KeyMapping("key.chunkanalysis.scan", -1, category),
+                keyBindChunkAnalysisVoids = new KeyMapping("key.chunkanalysis.voids", -1, category)
         };
     }
 

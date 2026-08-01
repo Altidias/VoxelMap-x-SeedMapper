@@ -5,6 +5,7 @@ import com.mamiyaotaru.voxelmap.multiloader.MultiLoaderManager;
 import com.mamiyaotaru.voxelmap.persistent.ThreadManager;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperCommandHandler;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperEspRenderer;
+import com.mamiyaotaru.voxelmap.chunkanalysis.ChunkAnalysisRenderer;
 import com.mamiyaotaru.voxelmap.util.BiomeRepository;
 import com.mamiyaotaru.voxelmap.util.CommandUtils;
 import com.mamiyaotaru.voxelmap.util.MessageUtils;
@@ -177,6 +178,7 @@ public final class VoxelConstants {
         try {
             VoxelConstants.getVoxelMapInstance().getWaypointManager().renderWaypoints(gameTimeDeltaPartialTick, poseStack, submitNodeCollector, camera);
             SeedMapperEspRenderer.render(gameTimeDeltaPartialTick, poseStack, submitNodeCollector, camera);
+            ChunkAnalysisRenderer.render(poseStack, submitNodeCollector, camera);
         } catch (RuntimeException e) {
             VoxelConstants.getLogger().log(org.apache.logging.log4j.Level.ERROR, "Error while render waypoints", e);
         }

@@ -19,6 +19,13 @@
     "MixinChatHud",
     "MixinInGameHud",
     "MixinManageServerScreen",
+    "MixinCappedProcessorChunkAnalysis",
+    "MixinEntityTypeChunkAnalysis",
+    "MixinEndCityPieceChunkAnalysis",
+    "MixinFossilFeatureChunkAnalysis",
+    "MixinPaleMossDecoratorChunkAnalysis",
+    "MixinTemplateFeatureChunkAnalysis",
+    "NoiseBasedChunkGeneratorAccessor",
     "MixinWorldOpenFlows",
     "MixinWorldRenderer",
     "MixinSectionUpdateTracker"

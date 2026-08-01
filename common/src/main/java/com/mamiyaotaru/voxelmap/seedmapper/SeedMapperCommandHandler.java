@@ -15,6 +15,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mamiyaotaru.voxelmap.chunksync.ChunkSyncCommandHandler;
+import com.mamiyaotaru.voxelmap.chunkanalysis.ChunkAnalysisService;
+import com.mamiyaotaru.voxelmap.MapSettingsManager;
 import com.mamiyaotaru.voxelmap.VoxelConstants;
 import com.mamiyaotaru.voxelmap.integration.BaritoneHelper;
 import com.mamiyaotaru.voxelmap.integration.BaritoneOreMiner;
@@ -143,8 +145,56 @@ public final class SeedMapperCommandHandler {
                 ChunkSyncCommandHandler.runFromGui(forwarded);
                 yield true;
             }
+            case "chunkanalysis", "analyze" -> { handleChunkAnalysis(args); yield true; }
             default -> { send("Unknown subcommand. Use /seedmap help"); yield true; }
         };
+    }
+
+    private static void handleChunkAnalysis(String[] args) {
+        ChunkAnalysisService service = ChunkAnalysisService.get();
+        if (args.length < 3 || args[2].equalsIgnoreCase("scan")) {
+            int radius = VoxelConstants.getVoxelMapInstance().getChunkAnalysisOptions().scanRadius;
+            int radiusIndex = args.length >= 3 && args[2].equalsIgnoreCase("scan") ? 3 : 2;
+            if (args.length > radiusIndex) {
+                try {
+                    radius = Integer.parseInt(args[radiusIndex]);
+                } catch (NumberFormatException exception) {
+                    send("Usage: /seedmap chunkanalysis scan [radius 0-8]");
+                    return;
+                }
+            }
+            service.scan(radius);
+            return;
+        }
+        switch (args[2].toLowerCase(Locale.ROOT)) {
+            case "voids", "void", "holes", "excavations" -> {
+                int radius = VoxelConstants.getVoxelMapInstance().getChunkAnalysisOptions().scanRadius;
+                if (args.length > 3) {
+                    try {
+                        radius = Integer.parseInt(args[3]);
+                    } catch (NumberFormatException exception) {
+                        send("Usage: /seedmap chunkanalysis voids [radius 0-8]");
+                        return;
+                    }
+                }
+                service.scanVoids(radius);
+            }
+            case "clear", "off" -> {
+                service.clear();
+                send("ChunkAnalysis overlay cleared.");
+            }
+            case "status" -> send("ChunkAnalysis: " + service.status()
+                    + (service.snapshot().differences().isEmpty() ? "." : ". " + ChunkAnalysisService.summary(service.snapshot())));
+            case "ghost" -> {
+                var settings = VoxelConstants.getVoxelMapInstance().getChunkAnalysisOptions();
+                boolean enabled = args.length < 4 ? !settings.ghostBlocks
+                        : args[3].equalsIgnoreCase("on") || args[3].equalsIgnoreCase("true");
+                settings.ghostBlocks = enabled;
+                MapSettingsManager.instance.saveAll();
+                send("ChunkAnalysis ghost blocks: " + (enabled ? "ON" : "OFF") + ".");
+            }
+            default -> send("Usage: /seedmap chunkanalysis <scan [radius]|voids [radius]|clear|status|ghost [on|off]>");
+        }
     }
 
     private static void handleUpdateChecker(String[] args) {
@@ -2039,6 +2089,7 @@ public final class SeedMapperCommandHandler {
         lines.add("/seedmap highlight canyon [chunks]");
         lines.add("/seedmap highlight cave [chunks]");
         lines.add("/seedmap highlight clear");
+        lines.add("/seedmap chunkanalysis <scan [radius]|clear|status|ghost [on|off]>");
         lines.add("/seedmap mine orevein [chunks]");
         lines.add("/seedmap mine stop");
         lines.add("/seedmap export [visible|radius <blocks>|area <x> <z> <radius>]");

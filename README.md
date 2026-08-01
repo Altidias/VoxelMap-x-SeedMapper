@@ -58,8 +58,21 @@ Common commands:
 - `/seedmap highlight canyon [chunks]`
 - `/seedmap highlight cave [chunks]`
 - `/seedmap highlight clear`
+- `/seedmap chunkanalysis scan [radius]` (defaults to a 9x9 loaded-chunk comparison)
+- `/seedmap chunkanalysis ghost [on|off]`
+- `/seedmap chunkanalysis <status|clear>`
 - `/seedmap export [visible|radius <blocks>|area <x> <z> <radius>]`
 - `/seedmap source <run|seeded|positioned|in|versioned|flagged|as|rotated> ...`
+
+### ChunkAnalysis
+- Generates vanilla `ProtoChunk`s in memory from the configured seed and current vanilla dimension, through structures and features, without saving chunk data.
+- Conservatively compares seed-derived block types with loaded multiplayer chunks: red is expected-but-missing, blue is unexpected, and yellow is a changed block type.
+- Ignores exact state properties, fluids, and randomly ticking blocks because normal simulation can change them without player input.
+- High-confidence filtering also removes vegetation/decorative noise, unexpected natural terrain, and ambiguous swaps between natural terrain materials.
+- Optional player-shaped void detection performs a fast connected-component morphology pass and promotes likely tunnels, shafts, stairs, rooms, and excavations to deep red.
+- `/seedmap chunkanalysis voids [radius]` skips biome decoration/features and compares only the terrain/surface/carver baseline for a substantially faster void-only scan.
+- High-confidence filtering tracks decoration-stage writes separately from stable terrain, so arbitrary replacements in seed-derived terrain are detected without a block whitelist; chunks with strongly bidirectional cave disagreement are reported and filtered as incompatible baselines.
+- Uses transparent tinted block-model ghosts or optional solid ESP fills, with fair sampling across the scanned chunks and configurable performance limits.
 
 ### ESP, Tracing, and Loot Workflow
 - Added ESP rendering for blocks, ore veins, caves, canyons, and terrain.
