@@ -1497,8 +1497,6 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
                 this.buildWorldName();
             }
 
-            int worldNameY = showSeedHeader ? 28 : 16;
-            graphics.text(this.getFont(), this.worldNameDisplay, this.getWidth() - this.sideMargin - this.worldNameDisplayLength, worldNameY, 0xFFFFFFFF);
             if (isInSeedHeader(mouseX, mouseY)) {
                 renderTooltip(graphics, Component.literal("Open SeedMapper Options"), mouseX, mouseY);
             }
@@ -3078,8 +3076,9 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
             }
         }
 
-        // Portal markers are detected from world/chunks and must not depend on seed availability.
-        if (showPortalMarkers) {
+        // Portal markers are scanned from the currently loaded level. Do not
+        // draw them while previewing a different dimension.
+        if (showPortalMarkers && isViewingCurrentDimension()) {
             for (com.mamiyaotaru.voxelmap.PortalMarkersManager.PortalMarker marker :
                     VoxelConstants.getVoxelMapInstance().getPortalMarkersManager()
                             .getMarkersInBounds(minX, maxX, minZ, maxZ, showNetherPortals, showEndPortals, showEndBeacons)) {
@@ -3211,6 +3210,11 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
 
     private void drawContainerMarkers(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         if (!options.showWorldMapEntities) {
+            return;
+        }
+        // Container/entity markers come from the currently loaded level and
+        // cannot represent an alternate dimension preview.
+        if (!isViewingCurrentDimension()) {
             return;
         }
         if (!seedMapperOptions.containerDetection && !seedMapperOptions.workstationDetection
@@ -3375,7 +3379,9 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
         int perPage = Math.max(1, (contentEnd - x) / (iconSize + gap));
         List<LegendEntry> visibleEntries = new ArrayList<>();
         for (SeedMapperFeature feature : SeedMapperFeature.values()) {
-            if (feature == SeedMapperFeature.DATAPACK_STRUCTURE) {
+            if (feature == SeedMapperFeature.DATAPACK_STRUCTURE
+                    || feature == SeedMapperFeature.END_PORTAL
+                    || feature == SeedMapperFeature.END_BEACON) {
                 continue;
             }
             if (featureMatchesDimension(feature, currentDimension) && isSeedMapperFeatureVisible(feature)) {

@@ -31,10 +31,10 @@ VoxelMap x SeedMapper is a heavily modified fork of [VoxelMap Updated](https://g
 - Added separate SeedMapper structure-icon scale controls for the minimap and fullscreen world map under SeedMapper's World and Structures settings.
 
 ### SeedMap
-![SeedMap](https://i.imgur.com/XikKPVK.png)
+![SeedMap](https://i.imgur.com/cgqdPWi.jpeg)
 
 #### SeedMapper Menu
-![SeedMapMenu](https://i.imgur.com/iBHVqbI.png)
+![SeedMapMenu](https://i.imgur.com/CBPfP6z.png)
 
 #### Locate Structures
 ![LocateStructure](https://i.imgur.com/niui9AN.png)
@@ -117,13 +117,16 @@ Common commands:
 - Added cache write/decompression safeguards; stale cache data may need to be cleared after upgrading.
 
 #### SeedMapper Integration
-![LargeMap](https://i.imgur.com/qDZdMvs.png)
+![LargeMap](https://i.imgur.com/8ryURxr.png)
 
 #### Mark Complete Example
 ![MarkComplete](https://i.imgur.com/F6f8TF6.png)
 
 #### Coordinate View
 ![View](https://i.imgur.com/q0XYZRF.png)
+
+### Plot Lines & Chunk Trials
+![Example](https://i.imgur.com/i3ssjxy.png)
 
 ### Minimap and Chunk Overlay Improvements
 - Added SeedMapper marker rendering on the minimap.
@@ -158,9 +161,9 @@ Common commands:
 - Added chunk overlay styling controls including line mode/thickness and visibility toggles.
 
 #### Chunk Options
-![ChunkOptions](https://i.imgur.com/DmX10jt.png)
+![ChunkOptions](https://i.imgur.com/Q4gLJTr.png)
 
-### ChunkSync
+### ChunkSync/Sharing
 ChunkSync lets you securely share chunk-layer data with other players.
 
 #### One-Time Setup
@@ -192,7 +195,7 @@ ChunkSync lets you securely share chunk-layer data with other players.
 - `/chunksync players`
 - `/chunksync remove <name>`
 
-![ChunkSync](https://i.imgur.com/N43aPyV.png)
+![ChunkSync](https://i.imgur.com/nq5VNlH.png)
 
 ### UI and Settings
 - Added dedicated SeedMapper options tab and related screens.
@@ -202,7 +205,7 @@ ChunkSync lets you securely share chunk-layer data with other players.
 - Updated branding to `VoxelMap x SeedMapper by CevAPI`.
 - Added/updated localization keys for SeedMapper and chunk-sync features.
 
-![UI](https://i.imgur.com/UOuLcFS.png)
+![UI](https://i.imgur.com/rwCntHC.png)
 
 ### Persistence and Compatibility
 - SeedMapper state, datapack state, ESP settings, and completion state persist via VoxelMap settings.
