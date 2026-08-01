@@ -769,7 +769,11 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
     public boolean mouseClicked(MouseButtonEvent mouseButtonEvent, boolean doubleClick) {
         int mouseX = (int) mouseButtonEvent.x();
         int mouseY = (int) mouseButtonEvent.y();
-        if (mouseButtonEvent.button() == 1 && isInMap(mouseX, mouseY) && this.popupOpen()) {
+        // Right-button drag is only used to pan the map while drawing a plot
+        // line. In all other modes a right-click opens the context menu, which
+        // must not be preceded by a map drag (that would hide SeedMapper
+        // markers and clear their hitboxes before the release handler runs).
+        if (mouseButtonEvent.button() == 1 && isInMap(mouseX, mouseY) && this.popupOpen() && plotMode) {
             rightMapDrag = true;
             rightMapDragMoved = false;
             currentDragging = true;
