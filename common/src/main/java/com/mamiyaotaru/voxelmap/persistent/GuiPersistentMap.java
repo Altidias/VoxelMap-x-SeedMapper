@@ -43,11 +43,11 @@ import com.mamiyaotaru.voxelmap.util.ColorUtils;
 import com.mamiyaotaru.voxelmap.util.CommandUtils;
 import com.mamiyaotaru.voxelmap.util.AppChatMessages;
 import com.mamiyaotaru.voxelmap.util.DimensionContainer;
-import com.mamiyaotaru.voxelmap.util.DynamicMutableTexture;
+import com.mamiyaotaru.voxelmap.textures.DynamicMutableTexture;
 import com.mamiyaotaru.voxelmap.util.EasingUtils;
 import com.mamiyaotaru.voxelmap.util.GameVariableAccessShim;
 import com.mamiyaotaru.voxelmap.util.ImageUtils;
-import com.mamiyaotaru.voxelmap.util.VoxelMapGuiGraphics;
+import com.mamiyaotaru.voxelmap.rendering.VoxelMapGuiGraphics;
 import com.mamiyaotaru.voxelmap.util.TextUtils;
 import com.mamiyaotaru.voxelmap.util.Waypoint;
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
@@ -872,7 +872,7 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
 
         if (mapOptions.worldmapAllowed && isInSeedHeader(mouseX, mouseY)) {
             if (mouseButtonEvent.button() == 0) {
-                minecraft.gui.setScreen(new GuiSeedMapperOptions(this));
+                minecraft.gui.setScreen(new GuiMinimapOptions(this, "seedmapper"));
             }
             return true;
         }
@@ -1495,7 +1495,7 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
             }
 
             int worldNameY = showSeedHeader ? 28 : 16;
-            graphics.text(this.getFont(), this.worldNameDisplay, this.getWidth() - this.sideMargin - this.worldNameDisplayLength, worldNameY, 0xFFFFFF);
+            graphics.text(this.getFont(), this.worldNameDisplay, this.getWidth() - this.sideMargin - this.worldNameDisplayLength, worldNameY, 0xFFFFFFFF);
             if (isInSeedHeader(mouseX, mouseY)) {
                 renderTooltip(graphics, Component.literal("Open SeedMapper Options"), mouseX, mouseY);
             }

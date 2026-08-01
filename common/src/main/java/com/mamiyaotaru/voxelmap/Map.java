@@ -10,6 +10,7 @@ import com.mamiyaotaru.voxelmap.gui.overridden.EnumOptionsMinimap;
 import com.mamiyaotaru.voxelmap.chunksync.ChunkSharePlayerSettings;
 import com.mamiyaotaru.voxelmap.interfaces.AbstractMapData;
 import com.mamiyaotaru.voxelmap.interfaces.IChangeObserver;
+import com.mamiyaotaru.voxelmap.interfaces.IReloadListener;
 import com.mamiyaotaru.voxelmap.persistent.GuiPersistentMap;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperLocatorService;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperMarker;
@@ -28,7 +29,7 @@ import com.mamiyaotaru.voxelmap.util.CPULightmap;
 import com.mamiyaotaru.voxelmap.util.ColorUtils;
 import com.mamiyaotaru.voxelmap.util.Contact;
 import com.mamiyaotaru.voxelmap.util.DimensionContainer;
-import com.mamiyaotaru.voxelmap.util.DynamicMutableTexture;
+import com.mamiyaotaru.voxelmap.textures.DynamicMutableTexture;
 import com.mamiyaotaru.voxelmap.util.FullMapData;
 import com.mamiyaotaru.voxelmap.util.GameVariableAccessShim;
 import com.mamiyaotaru.voxelmap.util.MapChunkCache;
@@ -36,12 +37,12 @@ import com.mamiyaotaru.voxelmap.util.MapUtils;
 import com.mamiyaotaru.voxelmap.util.MinimapContext;
 import com.mamiyaotaru.voxelmap.util.MutableBlockPos;
 import com.mamiyaotaru.voxelmap.util.MutableBlockPosCache;
-import com.mamiyaotaru.voxelmap.util.RenderUtils;
-import com.mamiyaotaru.voxelmap.util.ScaledDynamicMutableTexture;
-import com.mamiyaotaru.voxelmap.util.VoxelMapCachedOrthoProjectionMatrixBuffer;
-import com.mamiyaotaru.voxelmap.util.VoxelMapGuiGraphics;
-import com.mamiyaotaru.voxelmap.util.VoxelMapRenderTarget;
-import com.mamiyaotaru.voxelmap.util.VoxelMapRenderTypes;
+import com.mamiyaotaru.voxelmap.rendering.RenderUtils;
+import com.mamiyaotaru.voxelmap.textures.ScaledDynamicMutableTexture;
+import com.mamiyaotaru.voxelmap.rendering.VoxelMapCachedOrthoProjectionMatrixBuffer;
+import com.mamiyaotaru.voxelmap.rendering.VoxelMapGuiGraphics;
+import com.mamiyaotaru.voxelmap.rendering.VoxelMapRenderTarget;
+import com.mamiyaotaru.voxelmap.rendering.VoxelMapRenderTypes;
 import com.mamiyaotaru.voxelmap.util.Waypoint;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
@@ -98,7 +99,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.TreeSet;
 
-public class Map implements Runnable, IChangeObserver {
+public class Map implements Runnable, IChangeObserver, IReloadListener {
 
     private final Minecraft minecraft = Minecraft.getInstance();
     private final MapSettingsManager options;
@@ -266,8 +267,6 @@ public class Map implements Runnable, IChangeObserver {
 
         this.finalMapRenderTarget = new VoxelMapRenderTarget(Identifier.fromNamespaceAndPath(VoxelConstants.MOD_ID, "render_target/voxelmap_final_map"));
         this.finalMapRenderTarget.createBuffers(fboTextureSize, fboTextureSize);
-
-        this.loadMapTextures();
     }
 
     private Thread createZCalcThread() {
@@ -276,6 +275,7 @@ public class Map implements Runnable, IChangeObserver {
         return thread;
     }
 
+    @Override
     public void onResourceManagerReload(ResourceManager resourceManager) {
         this.loadMapTextures();
     }
@@ -518,7 +518,7 @@ public class Map implements Runnable, IChangeObserver {
         }
 
         if (minecraft.gui.screen() == null && this.options.keyBindSeedMapperOptionsPage.consumeClick()) {
-            minecraft.gui.setScreen(new GuiSeedMapperOptions(null));
+            minecraft.gui.setScreen(new GuiMinimapOptions(null, "seedmapper"));
         }
 
         if (minecraft.gui.screen() == null && this.options.keyBindOptionsMenu.consumeClick()) {
