@@ -104,6 +104,8 @@ public final class VoxelMapSettings {
                         () -> map.autoHideHighlightsWhenNear, requires("options.voxelmap.requires.autoRemove"), 1),
                 toggle("tracer.enabled", "options.voxelmap.tracer.enabled", map,
                         () -> map.highlightTracerEnabled, value -> map.highlightTracerEnabled = value),
+                toggle("plots.minimap", "options.voxelmap.plots.minimap", map,
+                        () -> map.showPlotLinesOnMinimap, value -> map.showPlotLinesOnMinimap = value),
                 slider("tracer.thickness", "options.voxelmap.tracer.thickness", map,
                         () -> (double) map.highlightTracerThickness, value -> map.highlightTracerThickness = value.floatValue(),
                         1, 6, 0.1, value -> Component.literal(String.format(Locale.ROOT, "%.1f", value)),

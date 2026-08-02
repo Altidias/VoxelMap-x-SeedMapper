@@ -13,6 +13,7 @@ import com.mamiyaotaru.voxelmap.interfaces.AbstractMapData;
 import com.mamiyaotaru.voxelmap.interfaces.IChangeObserver;
 import com.mamiyaotaru.voxelmap.interfaces.IReloadListener;
 import com.mamiyaotaru.voxelmap.persistent.GuiPersistentMap;
+import com.mamiyaotaru.voxelmap.persistent.PlotManager;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperLocatorService;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperMarker;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperContainerDetection;
@@ -113,6 +114,7 @@ public class Map implements Runnable, IChangeObserver, IReloadListener {
     private long seedMapperLastMinimapQueryMs = 0L;
     private SeedMapperMinimapQueryKey seedMapperLastMinimapQueryKey;
     private List<SeedMapperMarker> seedMapperLastMinimapMarkers = List.of();
+    private String plotContextKey = "";
 
     // Map UI
     private static final float MAP_IMAGE_DEPTH = 100.0F;
@@ -1866,6 +1868,7 @@ public class Map implements Runnable, IChangeObserver, IReloadListener {
             matrixStack.pushMatrix();
             matrixStack.scale(512.0F / 64.0F, 512.0F / 64.0F, 1.0F);
             drawChunkOverlayMinimap(baseContext, matrixStack, 0, 0, GameVariableAccessShim.xCoordDouble(), GameVariableAccessShim.zCoordDouble());
+            drawPlotLinesMinimap(baseContext, matrixStack, GameVariableAccessShim.xCoordDouble(), GameVariableAccessShim.zCoordDouble());
             matrixStack.popMatrix();
 
             if (VoxelConstants.getVoxelMapInstance().getRadar() != null) {
@@ -2417,6 +2420,67 @@ public class Map implements Runnable, IChangeObserver, IReloadListener {
                 drawChunkSquare(context, matrixStack, x, y, baseX, baseZ, chunk, color, opacity);
             }
         }
+    }
+
+    private void drawPlotLinesMinimap(RenderUtils.SubmitContext context, Matrix4fStack matrixStack, double baseX, double baseZ) {
+        if (!options.showPlotLinesOnMinimap) return;
+        ClientLevel currentWorld = GameVariableAccessShim.getWorld();
+        if (currentWorld == null) return;
+        String viewedDimension = currentWorld.dimension().identifier().toString();
+        String currentPlotContext = VoxelConstants.getVoxelMapInstance().getWaypointManager().getCurrentWorldName()
+                + "|" + VoxelConstants.getVoxelMapInstance().getWaypointManager().getCurrentSubworldDescriptor(false)
+                + "|" + viewedDimension;
+        if (!currentPlotContext.equals(plotContextKey)) {
+            VoxelConstants.getVoxelMapInstance().getPlotManager().load(
+                    VoxelConstants.getVoxelMapInstance().getWaypointManager().getCurrentWorldName(),
+                    VoxelConstants.getVoxelMapInstance().getWaypointManager().getCurrentSubworldDescriptor(false),
+                    viewedDimension);
+            plotContextKey = currentPlotContext;
+        }
+        for (PlotManager.Plot plot : VoxelConstants.getVoxelMapInstance().getPlotManager().getPlots()) {
+            if (!isPlotVisibleInMinimapDimension(plot, viewedDimension)) continue;
+            double coordinateMultiplier = plotCoordinateMultiplier(plot.dimension(), viewedDimension);
+            drawPlotLineMinimap(context, matrixStack, plot, plot.x1() * coordinateMultiplier, plot.z1() * coordinateMultiplier,
+                    plot.x2() * coordinateMultiplier, plot.z2() * coordinateMultiplier, baseX, baseZ);
+        }
+    }
+
+    private boolean isPlotVisibleInMinimapDimension(PlotManager.Plot plot, String viewed) {
+        if (viewed.equals(plot.dimension())) return true;
+        boolean sourceOverworld = "minecraft:overworld".equals(plot.dimension());
+        boolean sourceNether = "minecraft:the_nether".equals(plot.dimension()) || "minecraft:nether".equals(plot.dimension());
+        boolean viewedOverworld = "minecraft:overworld".equals(viewed);
+        boolean viewedNether = "minecraft:the_nether".equals(viewed) || "minecraft:nether".equals(viewed);
+        return plot.showOppositeDimension() && ((sourceOverworld && viewedNether) || (sourceNether && viewedOverworld));
+    }
+
+    private double plotCoordinateMultiplier(String source, String viewed) {
+        if (source.equals(viewed)) return 1.0D;
+        double sourceScale = "minecraft:overworld".equals(source) ? 1.0D : 8.0D;
+        double viewedScale = "minecraft:overworld".equals(viewed) ? 1.0D : 8.0D;
+        return sourceScale / viewedScale;
+    }
+
+    private void drawPlotLineMinimap(RenderUtils.SubmitContext context, Matrix4fStack matrixStack, PlotManager.Plot plot,
+            double x1, double z1, double x2, double z2, double baseX, double baseZ) {
+        float[] first = projectChunkPoint(baseX, baseZ, x1, z1);
+        float[] second = projectChunkPoint(baseX, baseZ, x2, z2);
+        float ax = first[0];
+        float az = first[1];
+        float bx = second[0];
+        float bz = second[1];
+        float dx = bx - ax;
+        float dz = bz - az;
+        float length = (float) Math.sqrt(dx * dx + dz * dz);
+        if (length < 0.01F) return;
+        float half = Math.max(1.0F, 2.0F + plot.thickness()) / 2.0F;
+        float nx = -dz / length * half;
+        float nz = dx / length * half;
+        int color = new int[]{0xFFFFD21F, 0xFF4DD2FF, 0xFF66E36F, 0xFFFF66C4, 0xFFB980FF, 0xFFFF8033}[Math.floorMod(plot.color(), 6)];
+        RenderUtils.submitColoredQuad(context.order(SUBMIT_MAP_WAYPOINTS), matrixStack, VoxelMapRenderTypes.WAYPOINT_TEXT_BACKGROUND,
+                ax - nx, az - nz, bx - nx, bz - nz, bx + nx, bz + nz, ax + nx, az + nz, MAP_OVERLAY_DEPTH, 0xDD000000);
+        RenderUtils.submitColoredQuad(context.order(SUBMIT_MAP_WAYPOINTS), matrixStack, VoxelMapRenderTypes.WAYPOINT_TEXT_BACKGROUND,
+                ax - nx, az - nz, bx - nx, bz - nz, bx + nx, bz + nz, ax + nx, az + nz, MAP_OVERLAY_DEPTH - 0.1F, color);
     }
 
     private void drawPortalMarkersMinimap(RenderUtils.SubmitContext context, Matrix4fStack matrixStack, int x, int y, double baseX, double baseZ) {

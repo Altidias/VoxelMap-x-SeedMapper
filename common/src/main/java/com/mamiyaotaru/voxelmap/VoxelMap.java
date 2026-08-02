@@ -8,6 +8,7 @@ import com.mamiyaotaru.voxelmap.multiloader.MultiLoaderManager;
 import com.mamiyaotaru.voxelmap.multiloader.PackRegistrar;
 import com.mamiyaotaru.voxelmap.persistent.PersistentMap;
 import com.mamiyaotaru.voxelmap.persistent.PersistentMapSettingsManager;
+import com.mamiyaotaru.voxelmap.persistent.PlotManager;
 import com.mamiyaotaru.voxelmap.seedmapper.SeedMapperCommandHandler;
 import com.mamiyaotaru.voxelmap.persistent.ThreadManager;
 import com.mamiyaotaru.voxelmap.persistent.VoxelMapDataStore;
@@ -53,6 +54,7 @@ public class VoxelMap implements PreparableReloadListener {
 
     private Map map;
     private PersistentMap persistentMap;
+    private PlotManager plotManager;
     private Radar radar;
     private RadarSimple radarSimple;
     private SettingsAndLightingChangeNotifier settingsAndLightingChangeNotifier;
@@ -120,6 +122,7 @@ public class VoxelMap implements PreparableReloadListener {
 
         map = new Map();
         persistentMap = new PersistentMap();
+        plotManager = new PlotManager();
         settingsAndLightingChangeNotifier = new SettingsAndLightingChangeNotifier();
         worldUpdateListener = new WorldUpdateListener();
         worldUpdateListener.addListener(map);
@@ -221,6 +224,8 @@ public class VoxelMap implements PreparableReloadListener {
             }
             world = newWorld;
             waypointManager.newWorld(world);
+            plotManager.load(waypointManager.getCurrentWorldName(), waypointManager.getCurrentSubworldDescriptor(false),
+                    world == null ? "unknown" : world.dimension().identifier().toString());
             persistentMap.newWorld(world);
             map.newWorld(world);
             String currentWorldId = world == null ? "unknown" : world.dimension().identifier().toString();
@@ -336,6 +341,10 @@ public class VoxelMap implements PreparableReloadListener {
     public PersistentMap getPersistentMap() {
         return persistentMap;
     }
+
+    public PlotManager getPlotManager() {
+        return plotManager;
+    }
     public AbstractRadar getRadar() {
         if (radarOptions.showRadar) {
             if (radarOptions.radarMode == 1) {
@@ -393,6 +402,8 @@ public class VoxelMap implements PreparableReloadListener {
     public synchronized void newSubWorldName(String name, boolean fromServer) {
         runOnWorldSet(() -> {
             waypointManager.setSubworldName(name, fromServer);
+            plotManager.load(waypointManager.getCurrentWorldName(), waypointManager.getCurrentSubworldDescriptor(false),
+                    world == null ? "unknown" : world.dimension().identifier().toString());
             map.newWorldName();
         });
     }

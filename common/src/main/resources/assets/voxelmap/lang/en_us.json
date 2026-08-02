@@ -541,6 +541,8 @@
   "options.voxelmap.highlights.removeRadius": "Highlight Remove Radius",
   "options.voxelmap.requires.autoRemove": "Requires auto remove highlights",
   "options.voxelmap.tracer.enabled": "Highlight Tracer",
+  "options.voxelmap.plots.minimap": "Show World Map Plot Lines on Minimap",
+  "options.voxelmap.plots.minimap.tooltip": "Shows plot lines created on the world map on the minimap.",
   "options.voxelmap.tracer.thickness": "Tracer Thickness",
   "options.voxelmap.tracer.color": "Tracer Color",
   "options.voxelmap.tracer.pick": "Pick Tracer Color",

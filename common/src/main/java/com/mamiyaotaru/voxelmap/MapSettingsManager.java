@@ -66,6 +66,7 @@ public class MapSettingsManager implements ISettingsManager {
     public boolean showEndPortalMarkers = true;
     public boolean showEndGatewayMarkers = true;
     public boolean highlightTracerEnabled = true;
+    public boolean showPlotLinesOnMinimap = true;
     public float highlightTracerThickness = 2.0F;
     public String highlightTracerColor = "#FF0000";
     public boolean autoHideHighlightsWhenNear = true;
@@ -216,6 +217,7 @@ public class MapSettingsManager implements ISettingsManager {
                         case "Show End Portal Markers" -> showEndPortalMarkers = Boolean.parseBoolean(curLine[1]);
                         case "Show End Gateway Markers" -> showEndGatewayMarkers = Boolean.parseBoolean(curLine[1]);
                         case "Highlight Tracer Enabled" -> highlightTracerEnabled = Boolean.parseBoolean(curLine[1]);
+                        case "Show Plot Lines On Minimap" -> showPlotLinesOnMinimap = Boolean.parseBoolean(curLine[1]);
                         case "Highlight Tracer Thickness" -> highlightTracerThickness = Mth.clamp(Float.parseFloat(curLine[1]), 1.0F, 6.0F);
                         case "Highlight Tracer Color" -> highlightTracerColor = sanitizeColor(curLine[1], highlightTracerColor);
                         case "Auto-hide Highlights When Near" -> autoHideHighlightsWhenNear = Boolean.parseBoolean(curLine[1]);
@@ -350,6 +352,7 @@ public class MapSettingsManager implements ISettingsManager {
             out.println("Show End Portal Markers:" + showEndPortalMarkers);
             out.println("Show End Gateway Markers:" + showEndGatewayMarkers);
             out.println("Highlight Tracer Enabled:" + highlightTracerEnabled);
+            out.println("Show Plot Lines On Minimap:" + showPlotLinesOnMinimap);
             out.println("Highlight Tracer Thickness:" + highlightTracerThickness);
             out.println("Highlight Tracer Color:" + highlightTracerColor);
             out.println("Auto-hide Highlights When Near:" + autoHideHighlightsWhenNear);

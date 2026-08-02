@@ -121,7 +121,7 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
     private static double pendingCenterZ = Double.NaN;
     private final Random generator = new Random();
     private final PersistentMap persistentMap;
-    private final PlotManager plotManager = new PlotManager();
+    private final PlotManager plotManager = VoxelConstants.getVoxelMapInstance().getPlotManager();
     private final WaypointManager waypointManager;
     private final MapSettingsManager mapOptions;
     private final RadarSettingsManager radarOptions;

@@ -12,11 +12,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Stores world-map-only lines for one world map view. */
-final class PlotManager {
+public final class PlotManager {
     private final List<Plot> plots = new ArrayList<>();
     private File file;
 
-    void load(String world, String subworld, String dimension) {
+    public void load(String world, String subworld, String dimension) {
         plots.clear();
         String worldPart = TextUtils.scrubNameFile(world == null || world.isBlank() ? "unknown" : world);
         String subworldPart = TextUtils.scrubNameFile(subworld == null || subworld.isBlank() ? "default" : subworld);
@@ -46,15 +46,15 @@ final class PlotManager {
         }
     }
 
-    List<Plot> getPlots() { return plots; }
+    public List<Plot> getPlots() { return plots; }
 
-    void add(Plot plot) { plots.add(plot); save(); }
+    public void add(Plot plot) { plots.add(plot); save(); }
 
-    void remove(Plot plot) {
+    public void remove(Plot plot) {
         if (plots.remove(plot)) save();
     }
 
-    void replace(Plot oldPlot, Plot newPlot) {
+    public void replace(Plot oldPlot, Plot newPlot) {
         int index = plots.indexOf(oldPlot);
         if (index >= 0) {
             plots.set(index, newPlot);
@@ -78,9 +78,9 @@ final class PlotManager {
         }
     }
 
-    record Plot(double x1, double z1, double x2, double z2, String dimension,
+    public record Plot(double x1, double z1, double x2, double z2, String dimension,
                 boolean showOppositeDimension, int thickness, int color) {
-        Plot(double x1, double z1, double x2, double z2) {
+        public Plot(double x1, double z1, double x2, double z2) {
             this(x1, z1, x2, z2, "minecraft:overworld", false, 0, 0);
         }
     }
