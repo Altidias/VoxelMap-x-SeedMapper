@@ -100,21 +100,22 @@ public final class RemoteSyncService {
 
         if (!ChunkShareConfig.isCartobaseUploaded(serverName()) && uploadInFlight.compareAndSet(false, true)) {
             startExistingDataUpload(serverName());
-            return;
         }
+        // chunk traffic waits for the initial upload, presence does not
+        boolean uploading = uploadInFlight.get();
 
         long now = System.currentTimeMillis();
         if (now - lastPeersMs >= PEERS_INTERVAL_MS && peersInFlight.compareAndSet(false, true)) {
             lastPeersMs = now;
             worker.submit(this::runPeersRefresh);
         }
-        if (now - lastPushMs >= PUSH_INTERVAL_MS && !RemoteOutbox.isEmpty() && pushInFlight.compareAndSet(false, true)) {
+        if (!uploading && now - lastPushMs >= PUSH_INTERVAL_MS && !RemoteOutbox.isEmpty() && pushInFlight.compareAndSet(false, true)) {
             lastPushMs = now;
             String world = serverName();
             Map<String, Map<String, List<int[]>>> delta = RemoteOutbox.drain();
             worker.submit(() -> runPush(world, delta));
         }
-        if (now - lastPullMs >= PULL_INTERVAL_MS && pullInFlight.compareAndSet(false, true)) {
+        if (!uploading && now - lastPullMs >= PULL_INTERVAL_MS && pullInFlight.compareAndSet(false, true)) {
             lastPullMs = now;
             String world = serverName();
             String dim = dimTag();
