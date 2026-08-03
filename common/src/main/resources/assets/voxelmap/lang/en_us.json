@@ -674,6 +674,7 @@
   "options.voxelmap.sharing.cartobaseEnabled": "Sync Enabled",
   "options.voxelmap.sharing.cartobasePeers": "Peers",
   "options.voxelmap.sharing.cartobaseStatus": "Show Status",
+  "options.voxelmap.sharing.cartobaseResync": "Re-upload All Local Data",
   "options.voxelmap.sharing.cartobasePeersTitle": "Cartobase Peers",
   "options.voxelmap.sharing.cartobasePeerName": "Player Name",
   "options.voxelmap.sharing.cartobaseRequest": "Request Share",

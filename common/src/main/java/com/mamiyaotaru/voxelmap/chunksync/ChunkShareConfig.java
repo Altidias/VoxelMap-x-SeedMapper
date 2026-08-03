@@ -21,6 +21,7 @@ public final class ChunkShareConfig {
     private static final String KEY_CARTOBASE_SESSION = "cartobaseSession";
     private static final String KEY_CARTOBASE_USERNAME = "cartobaseUsername";
     private static final String KEY_CARTOBASE_ENABLED = "cartobaseEnabled";
+    private static final String KEY_CARTOBASE_UPLOADED_PREFIX = "cartobaseUploaded.";
 
     private ChunkShareConfig() {
     }
@@ -131,6 +132,21 @@ public final class ChunkShareConfig {
     public static void setCartobaseEnabled(boolean enabled) {
         Properties props = load();
         props.setProperty(KEY_CARTOBASE_ENABLED, Boolean.toString(enabled));
+        save(props);
+    }
+
+    // tracks worlds whose existing on-disk chunks have already been uploaded once
+    public static boolean isCartobaseUploaded(String worldKey) {
+        return Boolean.parseBoolean(load().getProperty(KEY_CARTOBASE_UPLOADED_PREFIX + worldKey, "false"));
+    }
+
+    public static void setCartobaseUploaded(String worldKey, boolean uploaded) {
+        Properties props = load();
+        if (uploaded) {
+            props.setProperty(KEY_CARTOBASE_UPLOADED_PREFIX + worldKey, "true");
+        } else {
+            props.remove(KEY_CARTOBASE_UPLOADED_PREFIX + worldKey);
+        }
         save(props);
     }
 

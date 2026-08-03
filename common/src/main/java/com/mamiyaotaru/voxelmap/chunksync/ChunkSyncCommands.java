@@ -53,6 +53,8 @@ public final class ChunkSyncCommands {
                                 .executes(context -> runner.apply("chunksync cartobase logout")))
                         .then(LiteralArgumentBuilder.<S>literal("peers")
                                 .executes(context -> runner.apply("chunksync cartobase peers")))
+                        .then(LiteralArgumentBuilder.<S>literal("resync")
+                                .executes(context -> runner.apply("chunksync cartobase resync")))
                         .then(LiteralArgumentBuilder.<S>literal("url")
                                 .then(RequiredArgumentBuilder.<S, String>argument("url", StringArgumentType.greedyString())
                                         .executes(context -> runner.apply("chunksync cartobase url " + StringArgumentType.getString(context, "url")))))

@@ -22,6 +22,7 @@ public final class RemoteSyncService {
     private static final long PEERS_INTERVAL_MS = 15000L;
     private static final long SESSION_REFRESH_INTERVAL_MS = 30L * 60L * 1000L;
     private static final int MAX_PULL_PAGES = 64;
+    private static final int UPLOAD_BATCH_CHUNKS = 20000;
 
     private static final RemoteSyncService INSTANCE = new RemoteSyncService();
 
@@ -37,6 +38,7 @@ public final class RemoteSyncService {
     private final AtomicBoolean refreshInFlight = new AtomicBoolean(false);
     private final AtomicBoolean presenceReportInFlight = new AtomicBoolean(false);
     private final AtomicBoolean presencePollInFlight = new AtomicBoolean(false);
+    private final AtomicBoolean uploadInFlight = new AtomicBoolean(false);
     private final Map<String, Long> pullCursors = new ConcurrentHashMap<>();
 
     private volatile boolean active = false;
@@ -93,6 +95,11 @@ public final class RemoteSyncService {
         ensureClient();
         if (selfUserId == null) {
             requestWhoami();
+            return;
+        }
+
+        if (!ChunkShareConfig.isCartobaseUploaded(serverName()) && uploadInFlight.compareAndSet(false, true)) {
+            startExistingDataUpload(serverName());
             return;
         }
 
@@ -234,6 +241,94 @@ public final class RemoteSyncService {
                 whoamiInFlight.set(false);
             }
         });
+    }
+
+    // first run for a world: ship everything already on disk, not just new discoveries.
+    // the export reads the chunk stores, so it has to happen on the client thread.
+    private void startExistingDataUpload(String world) {
+        status = "reading local map data...";
+        Map<String, long[]> explored;
+        Map<String, Map<String, long[]>> newold;
+        try {
+            explored = VoxelConstants.getVoxelMapInstance().getExploredChunksManager().exportAllDimensionsExplored();
+            newold = VoxelConstants.getVoxelMapInstance().getNewerNewChunksManager().exportAllDimensionsNewOld();
+        } catch (Exception e) {
+            VoxelConstants.getLogger().warn("Cartobase could not read local map data: " + e.getMessage());
+            status = "could not read local map data";
+            uploadInFlight.set(false);
+            return;
+        }
+        worker.submit(() -> runExistingDataUpload(world, explored, newold));
+    }
+
+    private void runExistingDataUpload(String world, Map<String, long[]> explored, Map<String, Map<String, long[]>> newold) {
+        CartobaseClient current = client;
+        try {
+            if (current == null) {
+                return;
+            }
+            long total = 0;
+            for (long[] coords : explored.values()) {
+                total += coords.length;
+            }
+            for (Map<String, long[]> byCategory : newold.values()) {
+                for (long[] coords : byCategory.values()) {
+                    total += coords.length;
+                }
+            }
+            if (total == 0) {
+                ChunkShareConfig.setCartobaseUploaded(world, true);
+                status = "no existing map data to upload";
+                return;
+            }
+
+            VoxelConstants.getLogger().info("Cartobase uploading " + total + " existing chunks for " + world);
+            long sent = 0;
+            for (Map.Entry<String, long[]> dim : explored.entrySet()) {
+                sent = uploadCategory(current, world, dim.getKey(), RemoteOutbox.CATEGORY_NAMES[RemoteOutbox.EXPLORED],
+                        dim.getValue(), sent, total);
+            }
+            for (Map.Entry<String, Map<String, long[]>> dim : newold.entrySet()) {
+                for (Map.Entry<String, long[]> cat : dim.getValue().entrySet()) {
+                    sent = uploadCategory(current, world, dim.getKey(), cat.getKey(), cat.getValue(), sent, total);
+                }
+            }
+
+            ChunkShareConfig.setCartobaseUploaded(world, true);
+            status = "uploaded " + total + " existing chunks";
+            VoxelConstants.getLogger().info("Cartobase finished uploading existing chunks for " + world);
+        } catch (CartobaseClient.AuthException e) {
+            handleAuthFailure();
+        } catch (Exception e) {
+            status = "upload of existing data failed";
+            VoxelConstants.getLogger().warn("Cartobase upload of existing data failed: " + e.getMessage());
+        } finally {
+            uploadInFlight.set(false);
+        }
+    }
+
+    private long uploadCategory(CartobaseClient current, String world, String dim, String category,
+                                long[] coords, long sent, long total) throws Exception {
+        List<int[]> batch = new ArrayList<>(Math.min(UPLOAD_BATCH_CHUNKS, coords.length));
+        for (long packed : coords) {
+            batch.add(new int[] {(int) (packed >> 32), (int) packed});
+            if (batch.size() >= UPLOAD_BATCH_CHUNKS) {
+                current.pushChunks(world, dim, Map.of(category, batch));
+                sent += batch.size();
+                status = "uploading existing map data " + (sent * 100 / Math.max(1, total)) + "%";
+                batch = new ArrayList<>(UPLOAD_BATCH_CHUNKS);
+            }
+        }
+        if (!batch.isEmpty()) {
+            current.pushChunks(world, dim, Map.of(category, batch));
+            sent += batch.size();
+            status = "uploading existing map data " + (sent * 100 / Math.max(1, total)) + "%";
+        }
+        return sent;
+    }
+
+    public void resetExistingDataUpload() {
+        ChunkShareConfig.setCartobaseUploaded(serverName(), false);
     }
 
     private void runPeersRefresh() {

@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 public final class ChunkSyncCommandHandler {
     private static final String USAGE = "Usage: /chunksync share [to <player>] | get <code> [as <player>] | key <pass> "
             + "| host <litterbox|file.io> | export [name] | import [name] [as <player>] | players | remove <player> "
-            + "| cartobase <status | url <url> | login <user> <pass> | logout | on | off | share <user> | accept <user> | revoke <user> | peers>";
+            + "| cartobase <status | url <url> | login <user> <pass> | logout | on | off | share <user> | accept <user> | revoke <user> | peers | resync>";
     private static Consumer<String> statusSink;
 
     private ChunkSyncCommandHandler() {
@@ -251,12 +251,16 @@ public final class ChunkSyncCommandHandler {
                     RemoteSyncService.instance().refreshSharesNow(null);
                 });
             }
+            case "resync" -> {
+                RemoteSyncService.instance().resetExistingDataUpload();
+                sendChunkSync("Cartobase: will re-upload all local map data for this server.");
+            }
             case "peers" -> withClient(client -> {
                 CartobaseClient.ShareList shares = client.listShares();
                 sendAsync("Active: [" + names(shares.active()) + "]  incoming: [" + names(shares.incoming())
                         + "]  outgoing: [" + names(shares.outgoing()) + "]");
             });
-            default -> sendChunkSync("Usage: /chunksync cartobase <status | url <url> | login <user> <pass> | logout | on | off | share <user> | accept <user> | revoke <user> | peers>");
+            default -> sendChunkSync("Usage: /chunksync cartobase <status | url <url> | login <user> <pass> | logout | on | off | share <user> | accept <user> | revoke <user> | peers | resync>");
         }
     }
 
