@@ -1433,6 +1433,10 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
             drawPlayer(graphics, voxelmapSkinLocation, playerX, playerZ, mouseX, mouseY);
         }
 
+        if (com.mamiyaotaru.voxelmap.chunksync.ChunkShareConfig.isCartobaseEnabled()) {
+            drawPeerHeads(graphics);
+        }
+
         if (System.currentTimeMillis() - this.timeOfLastKBInput < 2000L) {
             int scWidth = minecraft.getWindow().getGuiScaledWidth();
             int scHeight = minecraft.getWindow().getGuiScaledHeight();
@@ -2410,6 +2414,65 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
         graphics.pose().popMatrix();
 
         return isHovered;
+    }
+
+    private void drawPeerHeads(GuiGraphicsExtractor graphics) {
+        java.util.List<com.mamiyaotaru.voxelmap.chunksync.PeerPresence> peers =
+                com.mamiyaotaru.voxelmap.chunksync.RemoteSyncService.instance().getPeerPresence();
+        for (com.mamiyaotaru.voxelmap.chunksync.PeerPresence member : peers) {
+            Identifier head = com.mamiyaotaru.voxelmap.chunksync.PeerSkins.headFor(member);
+            if (head == null) {
+                continue;
+            }
+            float memberX = (float) convertPeerCoordinateToViewed(member.x(), member.dimension());
+            float memberZ = (float) convertPeerCoordinateToViewed(member.z(), member.dimension());
+            drawPeerHead(graphics, head, member.name(), memberX, memberZ);
+        }
+    }
+
+    private void drawPeerHead(GuiGraphicsExtractor graphics, Identifier skin, String name, float memberX, float memberZ) {
+        float headWidth = ICON_WIDTH * 0.75F;
+        float headHeight = ICON_HEIGHT * 0.75F;
+        int x = this.width / 2;
+        int y = this.height / 2;
+        int borderX = x - 4;
+        int borderY = y - this.top;
+
+        double wayX = this.mapCenterX - (this.oldNorth ? -memberZ : memberX);
+        double wayY = this.mapCenterZ - (this.oldNorth ? memberX : memberZ);
+        float locate = (float) Math.atan2(wayX, wayY);
+        float hypot = (float) Math.sqrt(wayX * wayX + wayY * wayY) * mapToGui;
+
+        double dispX = hypot * Math.sin(locate);
+        double dispY = hypot * Math.cos(locate);
+        boolean far = Math.abs(dispX) > borderX || Math.abs(dispY) > borderY;
+        if (far) {
+            hypot *= (float) Math.min(borderX / Math.abs(dispX), borderY / Math.abs(dispY));
+        }
+
+        graphics.pose().pushMatrix();
+        if (far) {
+            graphics.pose().translate(x, y);
+            graphics.pose().rotate(-locate);
+            graphics.pose().translate(0.0F, -hypot);
+            graphics.pose().rotate(locate);
+            graphics.pose().translate(-x, -y);
+        } else {
+            graphics.pose().rotate(-locate);
+            graphics.pose().translate(0.0F, -hypot);
+            graphics.pose().rotate(locate);
+        }
+
+        VoxelMapGuiGraphics.blitFloat(graphics, RenderPipelines.GUI_TEXTURED, skin, x - headWidth / 2.0F, y - headHeight / 2.0F, headWidth, headHeight, 0, 1, 0, 1, 0xFFFFFFFF);
+        graphics.centeredText(getFont(), Component.literal(name), x, (int) (y - headHeight / 2.0F - 9.0F), 0xFFFFFFFF);
+
+        graphics.pose().popMatrix();
+    }
+
+    private double convertPeerCoordinateToViewed(double coordinate, String memberDimensionTag) {
+        double memberScale = memberDimensionTag != null && memberDimensionTag.toLowerCase(java.util.Locale.ROOT).contains("nether") ? 8.0 : 1.0;
+        double targetScale = viewedCoordinateScale();
+        return memberScale == targetScale ? coordinate : coordinate * memberScale / targetScale;
     }
 
     private boolean drawWaypoint(GuiGraphicsExtractor graphics, Waypoint waypoint, TextureAtlas textureAtlas, Sprite icon, boolean isHighlighted, int color, int mouseX, int mouseY) {

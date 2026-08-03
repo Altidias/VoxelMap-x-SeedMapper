@@ -1927,9 +1927,78 @@ public class Map implements Runnable, IChangeObserver, IReloadListener {
             drawSeedMapperMinimapMarkers(context, matrixStack, x, y, lastXDouble, lastZDouble);
             drawContainerMinimapMarkers(context, matrixStack, x, y, lastXDouble, lastZDouble);
         }
+
+        if (com.mamiyaotaru.voxelmap.chunksync.ChunkShareConfig.isCartobaseEnabled()) {
+            drawPeerHeads(context, matrixStack, x, y, lastXDouble, lastZDouble);
+        }
         } finally {
             matrixStack.popMatrix();
         }
+    }
+
+    private void drawPeerHeads(RenderUtils.SubmitContext context, Matrix4fStack matrixStack, int x, int y, double baseX, double baseZ) {
+        java.util.List<com.mamiyaotaru.voxelmap.chunksync.PeerPresence> peers =
+                com.mamiyaotaru.voxelmap.chunksync.RemoteSyncService.instance().getPeerPresence();
+        if (peers.isEmpty()) {
+            return;
+        }
+        double viewerScale = dimScaleForLevel(GameVariableAccessShim.getWorld());
+        for (com.mamiyaotaru.voxelmap.chunksync.PeerPresence member : peers) {
+            drawPeerHead(context, matrixStack, x, y, member, baseX, baseZ, viewerScale);
+        }
+    }
+
+    private void drawPeerHead(RenderUtils.SubmitContext context, Matrix4fStack matrixStack, int x, int y, com.mamiyaotaru.voxelmap.chunksync.PeerPresence member, double baseX, double baseZ, double viewerScale) {
+        double memberScale = dimScaleForTag(member.dimension());
+        double dispX = member.x() * memberScale / viewerScale;
+        double dispZ = member.z() * memberScale / viewerScale;
+        double wayX = baseX - dispX;
+        double wayY = baseZ - dispZ;
+        float locate = (float) Math.toDegrees(Math.atan2(wayX, wayY));
+        float hypot = (float) (Math.sqrt(wayX * wayX + wayY * wayY) / zoomScaleAdjusted);
+        if (this.options.rotates) {
+            locate += this.direction;
+        } else {
+            locate -= this.rotationFactor;
+        }
+        if (this.options.squareMap) {
+            double radLocate = Math.toRadians(locate);
+            double sqX = hypot * Math.cos(radLocate);
+            double sqY = hypot * Math.sin(radLocate);
+            if (Math.abs(sqX) > 28.5 || Math.abs(sqY) > 28.5) {
+                hypot = (float) (hypot / Math.max(Math.abs(sqX), Math.abs(sqY)) * 30.0);
+            }
+        } else if (hypot >= 31.0F) {
+            hypot = 34.0F;
+        }
+
+        net.minecraft.resources.Identifier head = com.mamiyaotaru.voxelmap.chunksync.PeerSkins.headFor(member);
+
+        matrixStack.pushMatrix();
+        try {
+            matrixStack.rotate(Axis.ZP.rotationDegrees(-locate));
+            matrixStack.translate(0.0F, -hypot, 0.0F);
+            matrixStack.rotate(Axis.ZP.rotationDegrees(locate));
+            if (head != null) {
+                RenderType headRenderType = VoxelMapRenderTypes.GUI_TEXTURED_LEQUAL_DEPTH_TEST.apply(head);
+                RenderUtils.submitTexturedModalRect(context.order(SUBMIT_MAP_WAYPOINTS), matrixStack, headRenderType, x - 4.0F, y - 4.0F, MAP_OVERLAY_DEPTH, 8.0F, 8.0F, 0xFFFFFFFF);
+            }
+            float scaleFactor = 0.5F;
+            matrixStack.pushMatrix();
+            matrixStack.scale(scaleFactor, scaleFactor, 1.0F);
+            RenderUtils.submitCenteredString(context.order(SUBMIT_MAP_WAYPOINTS), matrixStack, member.name(), x / scaleFactor, (y - 9.0F) / scaleFactor, 0.0F, 0xFFFFFFFF, true);
+            matrixStack.popMatrix();
+        } finally {
+            matrixStack.popMatrix();
+        }
+    }
+
+    private static double dimScaleForLevel(net.minecraft.world.level.Level level) {
+        return level == null ? 1.0 : level.dimensionType().coordinateScale();
+    }
+
+    private static double dimScaleForTag(String tag) {
+        return tag != null && tag.toLowerCase(java.util.Locale.ROOT).contains("nether") ? 8.0 : 1.0;
     }
 
 
