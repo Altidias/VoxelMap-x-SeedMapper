@@ -114,15 +114,16 @@ public final class RemoteSyncService {
             Map<String, Map<String, List<int[]>>> delta = RemoteOutbox.drain();
             worker.submit(() -> runPush(world, delta));
         }
-        if (now - lastPullMs >= PULL_INTERVAL_MS && !activePeers.isEmpty() && pullInFlight.compareAndSet(false, true)) {
+        if (now - lastPullMs >= PULL_INTERVAL_MS && pullInFlight.compareAndSet(false, true)) {
             lastPullMs = now;
             String world = serverName();
             String dim = dimTag();
+            String self = selfUserId;
             if (dim == null) {
                 pullInFlight.set(false);
             } else {
                 List<CartobaseClient.Share> peers = activePeers;
-                worker.submit(() -> runPull(world, dim, peers));
+                worker.submit(() -> runPull(world, dim, self, peers));
             }
         }
         if (now - lastSessionRefreshMs >= SESSION_REFRESH_INTERVAL_MS && refreshInFlight.compareAndSet(false, true)) {
@@ -376,14 +377,18 @@ public final class RemoteSyncService {
         }
     }
 
-    private void runPull(String world, String dim, List<CartobaseClient.Share> peers) {
+    private void runPull(String world, String dim, String selfId, List<CartobaseClient.Share> peers) {
         CartobaseClient current = client;
         try {
             if (current == null) {
                 return;
             }
+            // your own data first, so a second machine on this account catches up
+            if (selfId != null) {
+                pullOwner(current, world, dim, selfId, null);
+            }
             for (CartobaseClient.Share peer : peers) {
-                pullPeer(current, world, dim, peer);
+                pullOwner(current, world, dim, peer.peerId(), peer.peerUsername());
             }
         } catch (CartobaseClient.AuthException e) {
             handleAuthFailure();
@@ -394,14 +399,16 @@ public final class RemoteSyncService {
         }
     }
 
-    private void pullPeer(CartobaseClient current, String world, String dim, CartobaseClient.Share peer) throws Exception {
-        String key = world + "|" + dim + "|" + peer.peerId();
+    // ownerUsername null means this is your own data, which merges into your own
+    // map rather than becoming a separate coloured player layer
+    private void pullOwner(CartobaseClient current, String world, String dim, String ownerId, String ownerUsername) throws Exception {
+        String key = world + "|" + dim + "|" + ownerId;
         long cursor = pullCursors.getOrDefault(key, 0L);
         List<Long> explored = new ArrayList<>();
         Map<String, List<Long>> newold = new LinkedHashMap<>();
         int pages = 0;
         while (pages++ < MAX_PULL_PAGES) {
-            CartobaseClient.PullResult result = current.pullChunks(world, dim, peer.peerId(), cursor);
+            CartobaseClient.PullResult result = current.pullChunks(world, dim, ownerId, cursor);
             for (CartobaseClient.Container container : result.containers()) {
                 long[] coords = CartobaseClient.decodeContainer(container.cx(), container.cz(), container.bitmap());
                 if (coords.length == 0) {
@@ -420,10 +427,31 @@ public final class RemoteSyncService {
         }
         pullCursors.put(key, cursor);
         if (!explored.isEmpty() || !newold.isEmpty()) {
-            String slug = ChunkShareService.slugFor(peer.peerUsername());
             List<Long> exploredFinal = explored;
             Map<String, List<Long>> newoldFinal = newold;
-            Minecraft.getInstance().execute(() -> applyPulled(dim, slug, exploredFinal, newoldFinal));
+            if (ownerUsername == null) {
+                Minecraft.getInstance().execute(() -> applyOwnPulled(dim, exploredFinal, newoldFinal));
+            } else {
+                String slug = ChunkShareService.slugFor(ownerUsername);
+                Minecraft.getInstance().execute(() -> applyPulled(dim, slug, exploredFinal, newoldFinal));
+            }
+        }
+    }
+
+    // merges into your own stores; these import paths write to the stores directly
+    // so they do not feed back into the upload queue
+    private void applyOwnPulled(String dim, List<Long> explored, Map<String, List<Long>> newold) {
+        var exploredManager = VoxelConstants.getVoxelMapInstance().getExploredChunksManager();
+        var newoldManager = VoxelConstants.getVoxelMapInstance().getNewerNewChunksManager();
+        if (!explored.isEmpty()) {
+            exploredManager.importDimensionExplored(dim, toArray(explored));
+        }
+        if (!newold.isEmpty()) {
+            Map<String, long[]> byCategory = new LinkedHashMap<>();
+            for (Map.Entry<String, List<Long>> cat : newold.entrySet()) {
+                byCategory.put(cat.getKey(), toArray(cat.getValue()));
+            }
+            newoldManager.importDimensionNewOld(dim, byCategory);
         }
     }
 
