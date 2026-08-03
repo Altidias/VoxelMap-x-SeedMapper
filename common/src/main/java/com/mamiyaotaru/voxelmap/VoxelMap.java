@@ -255,6 +255,7 @@ public class VoxelMap implements PreparableReloadListener {
         VoxelConstants.tick();
         exploredChunksManager.onTick();
         newerNewChunksManager.onTick();
+        com.mamiyaotaru.voxelmap.chunksync.RemoteSyncService.instance().onClientTick();
         portalMarkersManager.onTick();
         com.mamiyaotaru.voxelmap.seedmapper.SeedMapperElytraDetection.tick();
         com.mamiyaotaru.voxelmap.seedmapper.SeedMapperContainerDetection.tick();

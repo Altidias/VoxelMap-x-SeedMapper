@@ -16,6 +16,11 @@ public final class ChunkShareConfig {
     private static final String KEY_PASSPHRASE = "passphrase";
     private static final String KEY_HOST = "host";
     private static final String KEY_HIDE_PUBLIC_SHARE_WARNING = "hidePublicShareWarning";
+    private static final String KEY_CARTOBASE_URL = "cartobaseUrl";
+    private static final String KEY_CARTOBASE_AUTH_URL = "cartobaseAuthUrl";
+    private static final String KEY_CARTOBASE_SESSION = "cartobaseSession";
+    private static final String KEY_CARTOBASE_USERNAME = "cartobaseUsername";
+    private static final String KEY_CARTOBASE_ENABLED = "cartobaseEnabled";
 
     private ChunkShareConfig() {
     }
@@ -73,6 +78,68 @@ public final class ChunkShareConfig {
         Properties props = load();
         props.setProperty(KEY_HOST, host.id);
         save(props);
+    }
+
+    public static String getCartobaseUrl() {
+        String value = load().getProperty(KEY_CARTOBASE_URL);
+        return value == null || value.isEmpty() ? null : normalizeUrl(value);
+    }
+
+    public static void setCartobaseUrl(String url) {
+        Properties props = load();
+        props.setProperty(KEY_CARTOBASE_URL, url == null ? "" : normalizeUrl(url));
+        save(props);
+    }
+
+    public static String getCartobaseAuthUrl() {
+        String value = load().getProperty(KEY_CARTOBASE_AUTH_URL);
+        return value == null || value.isEmpty() ? null : normalizeUrl(value);
+    }
+
+    public static void setCartobaseAuthUrl(String url) {
+        Properties props = load();
+        props.setProperty(KEY_CARTOBASE_AUTH_URL, url == null ? "" : normalizeUrl(url));
+        save(props);
+    }
+
+    public static String getCartobaseSession() {
+        String value = load().getProperty(KEY_CARTOBASE_SESSION);
+        return value == null || value.isEmpty() ? null : value;
+    }
+
+    public static void setCartobaseSession(String session) {
+        Properties props = load();
+        props.setProperty(KEY_CARTOBASE_SESSION, session == null ? "" : session.trim());
+        save(props);
+    }
+
+    public static String getCartobaseUsername() {
+        String value = load().getProperty(KEY_CARTOBASE_USERNAME);
+        return value == null || value.isEmpty() ? null : value;
+    }
+
+    public static void setCartobaseUsername(String username) {
+        Properties props = load();
+        props.setProperty(KEY_CARTOBASE_USERNAME, username == null ? "" : username.trim());
+        save(props);
+    }
+
+    public static boolean isCartobaseEnabled() {
+        return Boolean.parseBoolean(load().getProperty(KEY_CARTOBASE_ENABLED, "false"));
+    }
+
+    public static void setCartobaseEnabled(boolean enabled) {
+        Properties props = load();
+        props.setProperty(KEY_CARTOBASE_ENABLED, Boolean.toString(enabled));
+        save(props);
+    }
+
+    private static String normalizeUrl(String url) {
+        String trimmed = url.trim();
+        while (trimmed.endsWith("/")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed;
     }
 
     public static boolean isPublicShareWarningHidden() {
