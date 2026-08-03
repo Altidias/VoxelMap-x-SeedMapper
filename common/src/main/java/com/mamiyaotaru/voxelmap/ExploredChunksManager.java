@@ -46,10 +46,12 @@ public class ExploredChunksManager {
         int chunkX = GameVariableAccessShim.xCoord() >> 4;
         int chunkZ = GameVariableAccessShim.zCoord() >> 4;
         if (lastChunkX == null || lastChunkX != chunkX || lastChunkZ == null || lastChunkZ != chunkZ) {
+            String dimTag = remoteDimTag();
             if (lastChunkX == null || lastChunkZ == null) {
                 c.store().setChunk(chunkX, chunkZ);
+                com.mamiyaotaru.voxelmap.chunksync.RemoteOutbox.recordExplored(dimTag, chunkX, chunkZ);
             } else {
-                markExploredPath(c.store(), lastChunkX, lastChunkZ, chunkX, chunkZ);
+                markExploredPath(c.store(), lastChunkX, lastChunkZ, chunkX, chunkZ, dimTag);
             }
             lastChunkX = chunkX;
             lastChunkZ = chunkZ;
@@ -478,11 +480,12 @@ public class ExploredChunksManager {
         return new StoreCtx(store, new ExploredAsyncLoader(store, ThreadManager.executorService));
     }
 
-    private void markExploredPath(ExploredDiskStore store, int startX, int startZ, int endX, int endZ) {
+    private void markExploredPath(ExploredDiskStore store, int startX, int startZ, int endX, int endZ, String dimTag) {
         int dx = Math.abs(endX - startX);
         int dz = Math.abs(endZ - startZ);
         if (Math.max(dx, dz) > MAX_INTERPOLATED_GAP_CHUNKS) {
             store.setChunk(endX, endZ);
+            com.mamiyaotaru.voxelmap.chunksync.RemoteOutbox.recordExplored(dimTag, endX, endZ);
             return;
         }
         int stepX = Integer.compare(endX, startX);
@@ -492,6 +495,7 @@ public class ExploredChunksManager {
         int z = startZ;
         while (true) {
             store.setChunk(x, z);
+            com.mamiyaotaru.voxelmap.chunksync.RemoteOutbox.recordExplored(dimTag, x, z);
             if (x == endX && z == endZ) {
                 break;
             }
@@ -533,6 +537,11 @@ public class ExploredChunksManager {
         Level level = GameVariableAccessShim.getWorld();
         String dimension = level == null ? "unknown" : level.dimension().identifier().toString().replace(':', '_');
         return serverName() + "_" + dimension;
+    }
+
+    private String remoteDimTag() {
+        Level level = GameVariableAccessShim.getWorld();
+        return level == null ? null : level.dimension().identifier().toString().replace(':', '_');
     }
 
     private String serverName() {

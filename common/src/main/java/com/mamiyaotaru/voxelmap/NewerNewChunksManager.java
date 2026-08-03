@@ -135,6 +135,10 @@ public class NewerNewChunksManager {
             this.directoryName = directoryName;
             this.legacyFile = legacyFile;
         }
+
+        int remoteCategory() {
+            return ordinal() + 1;
+        }
     }
 
     public NewerNewChunksManager() {
@@ -638,7 +642,13 @@ public class NewerNewChunksManager {
         if (s != null) {
             s.get(type).store().setChunk(c.x(), c.z());
             markDataChanged();
+            com.mamiyaotaru.voxelmap.chunksync.RemoteOutbox.recordNewOld(remoteDimTag(), type.remoteCategory(), c.x(), c.z());
         }
+    }
+
+    private String remoteDimTag() {
+        Level level = GameVariableAccessShim.getWorld();
+        return level == null ? null : level.dimension().identifier().toString().replace(':', '_');
     }
 
     private boolean containsAny(ChunkPos c) {
