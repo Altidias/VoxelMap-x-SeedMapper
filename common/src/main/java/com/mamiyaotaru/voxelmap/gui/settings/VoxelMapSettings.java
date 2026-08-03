@@ -9,6 +9,7 @@ import com.mamiyaotaru.voxelmap.chunksync.ChunkShareTransport;
 import com.mamiyaotaru.voxelmap.chunksync.ChunkSyncCommandHandler;
 import com.mamiyaotaru.voxelmap.chunkanalysis.ChunkAnalysisService;
 import com.mamiyaotaru.voxelmap.chunkanalysis.ChunkAnalysisSettingsManager;
+import com.mamiyaotaru.voxelmap.gui.GuiCartobasePeers;
 import com.mamiyaotaru.voxelmap.gui.GuiChunkSyncLayers;
 import com.mamiyaotaru.voxelmap.gui.GuiColorEditScreen;
 import com.mamiyaotaru.voxelmap.gui.GuiSeedMapperCrackingMods;
@@ -596,8 +597,36 @@ public final class VoxelMapSettings {
         String[] layerName = {""};
         String[] transferName = {""};
         String[] importAs = {""};
+        String[] cartobaseUser = {""};
+        String[] cartobasePass = {""};
 
         return new SettingsCategory("sharing", "options.voxelmap.category.sharing", List.of(
+                group("options.voxelmap.group.sharingCartobase",
+                        SettingsOption.text("sharing.cartobaseUrl", "options.voxelmap.sharing.cartobaseUrl", null,
+                                () -> ChunkShareConfig.getCartobaseUrl() == null ? "" : ChunkShareConfig.getCartobaseUrl(),
+                                value -> ChunkSyncCommandHandler.runFromGui("cartobase url " + value.trim()),
+                                () -> true, Component::empty),
+                        SettingsOption.text("sharing.cartobaseUsername", "options.voxelmap.sharing.cartobaseUsername", null,
+                                () -> cartobaseUser[0].isEmpty() && ChunkShareConfig.getCartobaseUsername() != null
+                                        ? ChunkShareConfig.getCartobaseUsername()
+                                        : cartobaseUser[0],
+                                value -> cartobaseUser[0] = value.trim(), () -> true, Component::empty),
+                        SettingsOption.text("sharing.cartobasePassword", "options.voxelmap.sharing.cartobasePassword", null,
+                                () -> cartobasePass[0], value -> cartobasePass[0] = value.trim(), () -> true, Component::empty),
+                        espAction("sharing.cartobaseLogin", "options.voxelmap.sharing.cartobaseLogin", host,
+                                () -> {
+                                    String user = cartobaseUser[0].isEmpty() && ChunkShareConfig.getCartobaseUsername() != null
+                                            ? ChunkShareConfig.getCartobaseUsername()
+                                            : cartobaseUser[0];
+                                    ChunkSyncCommandHandler.runFromGui("cartobase login " + user + " " + cartobasePass[0]);
+                                    cartobasePass[0] = "";
+                                }),
+                        SettingsOption.toggle("sharing.cartobaseEnabled", "options.voxelmap.sharing.cartobaseEnabled", null,
+                                ChunkShareConfig::isCartobaseEnabled,
+                                value -> ChunkSyncCommandHandler.runFromGui("cartobase " + (value ? "on" : "off"))),
+                        openScreen("sharing.cartobasePeers", "options.voxelmap.sharing.cartobasePeers", host, GuiCartobasePeers::new),
+                        espAction("sharing.cartobaseStatus", "options.voxelmap.sharing.cartobaseStatus", host,
+                                () -> ChunkSyncCommandHandler.runFromGui("cartobase status"))),
                 group("options.voxelmap.group.sharingSetup",
                         SettingsOption.text("sharing.passphrase", "options.voxelmap.sharing.passphrase", null,
                                 () -> ChunkShareConfig.getPassphrase() == null ? "" : ChunkShareConfig.getPassphrase(),
