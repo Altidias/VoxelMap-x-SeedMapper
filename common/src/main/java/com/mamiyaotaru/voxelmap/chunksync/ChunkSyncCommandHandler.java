@@ -13,7 +13,8 @@ import java.util.function.Consumer;
 
 public final class ChunkSyncCommandHandler {
     private static final String USAGE = "Usage: /chunksync share [to <player>] | get <code> [as <player>] | key <pass> "
-            + "| host <litterbox|file.io> | export [name] | import [name] [as <player>] | players | remove <player>";
+            + "| host <litterbox|file.io> | export [name] | import [name] [as <player>] | players | remove <player> "
+            + "| cartobase <status | url <url> | login <user> <pass> | logout | on | off | share <user> | accept <user> | revoke <user> | peers>";
     private static Consumer<String> statusSink;
 
     private ChunkSyncCommandHandler() {
@@ -134,8 +135,180 @@ public final class ChunkSyncCommandHandler {
                 }
                 handleGet(code, asPlayer);
             }
+            case "cartobase" -> handleCartobase(args);
             default -> sendChunkSync(USAGE);
         }
+    }
+
+    private static void handleCartobase(String[] args) {
+        if (args.length < 3 || args[2].equalsIgnoreCase("status")) {
+            String url = ChunkShareConfig.getCartobaseUrl();
+            String user = ChunkShareConfig.getCartobaseUsername();
+            boolean enabled = ChunkShareConfig.isCartobaseEnabled();
+            var service = RemoteSyncService.instance();
+            sendChunkSync("Cartobase: " + (enabled ? "ON" : "OFF")
+                    + " | server=" + (url == null ? "(unset)" : url)
+                    + " | account=" + (user == null ? "(not logged in)" : user)
+                    + " | " + service.getStatus());
+            return;
+        }
+        switch (args[2].toLowerCase(Locale.ROOT)) {
+            case "url" -> {
+                if (args.length < 4) {
+                    sendChunkSync("Usage: /chunksync cartobase url <https://host:port>");
+                    return;
+                }
+                ChunkShareConfig.setCartobaseUrl(args[3]);
+                sendChunkSync("Cartobase server set to " + ChunkShareConfig.getCartobaseUrl());
+            }
+            case "login" -> {
+                if (args.length < 5) {
+                    sendChunkSync("Usage: /chunksync cartobase login <username> <password>");
+                    return;
+                }
+                String username = args[3];
+                StringBuilder password = new StringBuilder(args[4]);
+                for (int i = 5; i < args.length; i++) {
+                    password.append(' ').append(args[i]);
+                }
+                handleCartobaseLogin(username, password.toString());
+            }
+            case "logout" -> {
+                ChunkShareConfig.setCartobaseSession(null);
+                ChunkShareConfig.setCartobaseUsername(null);
+                ChunkShareConfig.setCartobaseEnabled(false);
+                RemoteSyncService.instance().noteLoggedOut();
+                sendChunkSync("Cartobase: logged out.");
+            }
+            case "on", "enable" -> {
+                if (ChunkShareConfig.getCartobaseUrl() == null || ChunkShareConfig.getCartobaseSession() == null) {
+                    sendChunkSync("Log in first: /chunksync cartobase login <username> <password> (after setting the server url).");
+                    return;
+                }
+                ChunkShareConfig.setCartobaseEnabled(true);
+                sendChunkSync("Cartobase sync enabled.");
+            }
+            case "off", "disable" -> {
+                ChunkShareConfig.setCartobaseEnabled(false);
+                sendChunkSync("Cartobase sync disabled.");
+            }
+            case "share" -> {
+                if (args.length < 4) {
+                    sendChunkSync("Usage: /chunksync cartobase share <username>");
+                    return;
+                }
+                String target = args[3];
+                withClient(client -> {
+                    CartobaseClient.Share share = client.requestShare(target);
+                    if ("active".equals(share.status())) {
+                        sendAsync("Sharing with " + share.peerUsername() + " is now active.");
+                    } else {
+                        sendAsync("Share request sent to " + share.peerUsername() + " - waiting for them to accept.");
+                    }
+                    RemoteSyncService.instance().refreshSharesNow(null);
+                });
+            }
+            case "accept" -> {
+                if (args.length < 4) {
+                    sendChunkSync("Usage: /chunksync cartobase accept <username>");
+                    return;
+                }
+                String target = args[3];
+                withClient(client -> {
+                    CartobaseClient.ShareList shares = client.listShares();
+                    CartobaseClient.Share match = shares.incoming().stream()
+                            .filter(s -> s.peerUsername().equalsIgnoreCase(target))
+                            .findFirst()
+                            .orElse(null);
+                    if (match == null) {
+                        sendAsync("No pending share request from '" + target + "'.");
+                        return;
+                    }
+                    client.acceptShare(match.id());
+                    sendAsync("Sharing with " + match.peerUsername() + " is now active.");
+                    RemoteSyncService.instance().refreshSharesNow(null);
+                });
+            }
+            case "revoke" -> {
+                if (args.length < 4) {
+                    sendChunkSync("Usage: /chunksync cartobase revoke <username>");
+                    return;
+                }
+                String target = args[3];
+                withClient(client -> {
+                    CartobaseClient.ShareList shares = client.listShares();
+                    CartobaseClient.Share match = java.util.stream.Stream.of(shares.active(), shares.incoming(), shares.outgoing())
+                            .flatMap(java.util.List::stream)
+                            .filter(s -> s.peerUsername().equalsIgnoreCase(target))
+                            .findFirst()
+                            .orElse(null);
+                    if (match == null) {
+                        sendAsync("No share with '" + target + "'.");
+                        return;
+                    }
+                    client.deleteShare(match.id());
+                    sendAsync("Share with " + match.peerUsername() + " removed.");
+                    RemoteSyncService.instance().refreshSharesNow(null);
+                });
+            }
+            case "peers" -> withClient(client -> {
+                CartobaseClient.ShareList shares = client.listShares();
+                sendAsync("Active: [" + names(shares.active()) + "]  incoming: [" + names(shares.incoming())
+                        + "]  outgoing: [" + names(shares.outgoing()) + "]");
+            });
+            default -> sendChunkSync("Usage: /chunksync cartobase <status | url <url> | login <user> <pass> | logout | on | off | share <user> | accept <user> | revoke <user> | peers>");
+        }
+    }
+
+    private static String names(java.util.List<CartobaseClient.Share> shares) {
+        return shares.stream().map(CartobaseClient.Share::peerUsername).reduce((a, b) -> a + ", " + b).orElse("");
+    }
+
+    private interface ClientTask {
+        void run(CartobaseClient client) throws Exception;
+    }
+
+    private static void withClient(ClientTask task) {
+        String url = ChunkShareConfig.getCartobaseUrl();
+        String session = ChunkShareConfig.getCartobaseSession();
+        if (url == null || session == null) {
+            sendChunkSync("Not logged in to a cartobase server. Set the url and log in first.");
+            return;
+        }
+        runOffThread("cartobase-request", () -> {
+            try {
+                task.run(new CartobaseClient(url, session));
+            } catch (CartobaseClient.AuthException e) {
+                sendAsync("Cartobase session expired - log in again from the sharing settings.");
+            } catch (Exception e) {
+                sendAsync("Cartobase request failed: " + e.getMessage());
+            }
+        });
+    }
+
+    private static void handleCartobaseLogin(String username, String password) {
+        String url = ChunkShareConfig.getCartobaseUrl();
+        if (url == null) {
+            sendChunkSync("Set the server first: /chunksync cartobase url <https://host:port>");
+            return;
+        }
+        sendChunkSync("Logging in to " + url + " as " + username + "...");
+        runOffThread("cartobase-login", () -> {
+            try {
+                String authUrl = CartobaseClient.fetchAuthServerUrl(url);
+                CartobaseClient.LoginResult result = CartobaseClient.login(authUrl, username, password);
+                ChunkShareConfig.setCartobaseAuthUrl(authUrl);
+                ChunkShareConfig.setCartobaseSession(result.sessionId());
+                ChunkShareConfig.setCartobaseUsername(result.username());
+                ChunkShareConfig.setCartobaseEnabled(true);
+                RemoteSyncService.instance().noteLoggedIn();
+                sendAsync("Cartobase: logged in as " + result.username() + ". Sync enabled.");
+            } catch (CartobaseClient.AuthException e) {
+                sendAsync("Login failed: invalid username or password.");
+            } catch (Exception e) {
+                sendAsync("Login failed: " + e.getMessage());
+            }
+        });
     }
 
     private static void handleShare(String target) {
