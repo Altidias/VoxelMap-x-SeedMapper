@@ -141,10 +141,11 @@ public final class RemoteSyncService {
                 double py = player.getY();
                 double pz = player.getZ();
                 float yaw = player.getYRot();
+                String playerName = player.getGameProfile().name();
                 if (dim == null) {
                     presenceReportInFlight.set(false);
                 } else {
-                    worker.submit(() -> runReportPresence(world, dim, px, py, pz, yaw));
+                    worker.submit(() -> runReportPresence(world, dim, playerName, px, py, pz, yaw));
                 }
             }
             if (now - lastPresencePollMs >= PRESENCE_INTERVAL_MS && presencePollInFlight.compareAndSet(false, true)) {
@@ -485,11 +486,11 @@ public final class RemoteSyncService {
         return array;
     }
 
-    private void runReportPresence(String world, String dim, double x, double y, double z, float yaw) {
+    private void runReportPresence(String world, String dim, String playerName, double x, double y, double z, float yaw) {
         CartobaseClient current = client;
         try {
             if (current != null) {
-                current.reportPresence(world, dim, x, y, z, yaw);
+                current.reportPresence(world, dim, ChunkShareConfig.getInstanceId(), playerName, x, y, z, yaw);
             }
         } catch (CartobaseClient.AuthException e) {
             handleAuthFailure();
@@ -506,10 +507,11 @@ public final class RemoteSyncService {
             if (current == null) {
                 return;
             }
-            List<CartobaseClient.Presence> list = current.listPresence(world);
+            List<CartobaseClient.Presence> list = current.listPresence(world, ChunkShareConfig.getInstanceId());
             List<PeerPresence> members = new ArrayList<>(list.size());
             for (CartobaseClient.Presence p : list) {
-                members.add(new PeerPresence(p.username(), p.dimension(), p.x(), p.y(), p.z(), p.yaw(), p.ageMs()));
+                members.add(new PeerPresence(p.username(), p.playerName(), p.dimension(),
+                        p.x(), p.y(), p.z(), p.yaw(), p.ageMs(), p.ownAccount()));
             }
             peerPresence = members;
         } catch (CartobaseClient.AuthException e) {

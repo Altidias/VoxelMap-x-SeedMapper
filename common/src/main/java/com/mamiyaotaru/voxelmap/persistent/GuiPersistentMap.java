@@ -2426,7 +2426,7 @@ public class GuiPersistentMap extends PopupGuiScreen implements IGuiWaypoints {
             }
             float memberX = (float) convertPeerCoordinateToViewed(member.x(), member.dimension());
             float memberZ = (float) convertPeerCoordinateToViewed(member.z(), member.dimension());
-            drawPeerHead(graphics, head, member.name(), memberX, memberZ);
+            drawPeerHead(graphics, head, member.label(), memberX, memberZ);
         }
     }
 

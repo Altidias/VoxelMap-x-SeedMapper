@@ -1986,7 +1986,7 @@ public class Map implements Runnable, IChangeObserver, IReloadListener {
             float scaleFactor = 0.5F;
             matrixStack.pushMatrix();
             matrixStack.scale(scaleFactor, scaleFactor, 1.0F);
-            RenderUtils.submitCenteredString(context.order(SUBMIT_MAP_WAYPOINTS), matrixStack, member.name(), x / scaleFactor, (y - 9.0F) / scaleFactor, 0.0F, 0xFFFFFFFF, true);
+            RenderUtils.submitCenteredString(context.order(SUBMIT_MAP_WAYPOINTS), matrixStack, member.label(), x / scaleFactor, (y - 9.0F) / scaleFactor, 0.0F, 0xFFFFFFFF, true);
             matrixStack.popMatrix();
         } finally {
             matrixStack.popMatrix();

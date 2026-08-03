@@ -58,7 +58,8 @@ public final class CartobaseClient {
     public record PullResult(List<Container> containers, long cursor, boolean complete) {
     }
 
-    public record Presence(String username, String dimension, double x, double y, double z, float yaw, long ageMs) {
+    public record Presence(String username, String playerName, String dimension, double x, double y, double z,
+                           float yaw, long ageMs, boolean ownAccount) {
     }
 
     public static String fetchAuthServerUrl(String cartobaseUrl) throws IOException, InterruptedException {
@@ -189,10 +190,13 @@ public final class CartobaseClient {
         return new PullResult(containers, cursor, complete);
     }
 
-    public void reportPresence(String world, String dim, double x, double y, double z, float yaw) throws IOException, InterruptedException {
+    public void reportPresence(String world, String dim, String instanceId, String playerName,
+                               double x, double y, double z, float yaw) throws IOException, InterruptedException {
         JsonObject body = new JsonObject();
         body.addProperty("world", world);
         body.addProperty("dimension", dim);
+        body.addProperty("instance_id", instanceId);
+        body.addProperty("player_name", playerName);
         body.addProperty("x", x);
         body.addProperty("y", y);
         body.addProperty("z", z);
@@ -203,8 +207,9 @@ public final class CartobaseClient {
                 .build());
     }
 
-    public List<Presence> listPresence(String world) throws IOException, InterruptedException {
-        HttpResponse<String> response = send(request("/api/v1/presence?world=" + enc(world)).GET().build());
+    public List<Presence> listPresence(String world, String instanceId) throws IOException, InterruptedException {
+        HttpResponse<String> response = send(request(
+                "/api/v1/presence?world=" + enc(world) + "&instance_id=" + enc(instanceId)).GET().build());
         JsonObject object = JsonParser.parseString(response.body()).getAsJsonObject();
         List<Presence> out = new ArrayList<>();
         JsonArray arr = object.getAsJsonArray("players");
@@ -213,12 +218,14 @@ public final class CartobaseClient {
                 JsonObject p = element.getAsJsonObject();
                 out.add(new Presence(
                         getString(p, "username"),
+                        getString(p, "player_name"),
                         getString(p, "dimension"),
                         p.get("x").getAsDouble(),
                         p.get("y").getAsDouble(),
                         p.get("z").getAsDouble(),
                         p.has("yaw") ? p.get("yaw").getAsFloat() : 0f,
-                        p.has("age_ms") ? p.get("age_ms").getAsLong() : 0L));
+                        p.has("age_ms") ? p.get("age_ms").getAsLong() : 0L,
+                        p.has("own_account") && p.get("own_account").getAsBoolean()));
             }
         }
         return out;

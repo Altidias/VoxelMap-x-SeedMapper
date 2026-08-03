@@ -27,7 +27,7 @@ public final class PeerSkins {
     }
 
     public static Identifier headFor(PeerPresence member) {
-        GameProfile profile = profileFor(member.name());
+        GameProfile profile = profileFor(member.label());
         if (profile == null) {
             return null;
         }
@@ -36,7 +36,7 @@ public final class PeerSkins {
             return null;
         }
         Identifier skinTexture = skin.get().body().texturePath();
-        String slug = ChunkShareService.slugFor(member.name()).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9/._-]", "_");
+        String slug = ChunkShareService.slugFor(member.label()).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9/._-]", "_");
         Cached cached = cache.get(slug);
         if (cached != null && cached.sourceSkin().equals(skinTexture)) {
             return cached.location();

@@ -22,6 +22,7 @@ public final class ChunkShareConfig {
     private static final String KEY_CARTOBASE_USERNAME = "cartobaseUsername";
     private static final String KEY_CARTOBASE_ENABLED = "cartobaseEnabled";
     private static final String KEY_CARTOBASE_UPLOADED_PREFIX = "cartobaseUploaded.";
+    private static final String KEY_CARTOBASE_INSTANCE = "cartobaseInstanceId";
 
     private ChunkShareConfig() {
     }
@@ -133,6 +134,19 @@ public final class ChunkShareConfig {
         Properties props = load();
         props.setProperty(KEY_CARTOBASE_ENABLED, Boolean.toString(enabled));
         save(props);
+    }
+
+    // identifies this game directory so one account can be online from several
+    // clients at once; generated on first use and kept afterwards
+    public static synchronized String getInstanceId() {
+        Properties props = load();
+        String value = props.getProperty(KEY_CARTOBASE_INSTANCE);
+        if (value == null || value.isBlank()) {
+            value = java.util.UUID.randomUUID().toString();
+            props.setProperty(KEY_CARTOBASE_INSTANCE, value);
+            save(props);
+        }
+        return value;
     }
 
     // tracks worlds whose existing on-disk chunks have already been uploaded once
